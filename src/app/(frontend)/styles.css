@@ -1064,13 +1064,6 @@ blockquote footer {
   object-fit: contain;
 }
 
-.artwork-lightbox__meta {
-  display: grid;
-  gap: 0.2rem;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
 .not-found-panel {
   max-width: 680px;
   margin: clamp(4rem, 10vw, 7rem) auto;

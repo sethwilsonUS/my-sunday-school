@@ -89,16 +89,6 @@ export function ArtworkCard({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img alt={alt} className="artwork-lightbox__image" src={src} />
             </div>
-            <div className="artwork-lightbox__meta">
-              {metadata.map((item, index) => (
-                <span key={`${item}-${index}`}>{item}</span>
-              ))}
-              {sourceUrl ? (
-                <a className="artwork-card__source" href={sourceUrl} rel="noopener noreferrer" target="_blank">
-                  {sourceLabel}
-                </a>
-              ) : null}
-            </div>
           </div>
         </dialog>
       ) : null}
