@@ -26,7 +26,7 @@ const getFilters = (searchParams: SearchParams): LessonFilters => {
   return { season, year }
 }
 
-const description = 'Browse published Sunday school lessons by liturgical season and lectionary year.'
+const description = 'Browse published Revised Common Lectionary lessons by liturgical season and lectionary year.'
 
 export const metadata: Metadata = {
   alternates: {

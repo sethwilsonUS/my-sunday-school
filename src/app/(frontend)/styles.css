@@ -564,12 +564,8 @@ p {
 
 .content-section {
   display: grid;
-  gap: 0.45rem;
-  scroll-margin-top: 110px;
-}
-
-.content-section--roomy {
   gap: 0.85rem;
+  scroll-margin-top: 110px;
 }
 
 .content-section > h2 {

@@ -7,7 +7,7 @@ import {
   ogContentType,
   ogSize,
 } from '@/lib/social-image'
-import { fetchImageDataUrl, getFirstLessonArtworkUrl } from '@/lib/share'
+import { fetchImageDataUrl, getFirstLessonArtworkUrl, getLessonMetadataLabel } from '@/lib/share'
 
 type ImageProps = {
   params: Promise<{
@@ -33,12 +33,13 @@ export default async function OpenGraphImage({ params }: ImageProps) {
   }
 
   const artworkDataUrl = await fetchImageDataUrl(getFirstLessonArtworkUrl(lesson))
+  const metadataLabel = getLessonMetadataLabel(lesson)
 
   return new ImageResponse(
     artworkDataUrl ? (
-      <LessonSocialCard artworkSrc={artworkDataUrl} />
+      <LessonSocialCard artworkSrc={artworkDataUrl} metadataLabel={metadataLabel} title={lesson.title} />
     ) : (
-      <LessonFallbackSocialCard title={lesson.title} />
+      <LessonFallbackSocialCard metadataLabel={metadataLabel} title={lesson.title} />
     ),
     {
       ...ogSize,

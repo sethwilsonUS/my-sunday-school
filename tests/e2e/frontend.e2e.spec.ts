@@ -11,10 +11,12 @@ test.describe('Frontend', () => {
   test('can go on homepage', async ({ page }) => {
     await page.goto('http://localhost:3000')
 
-    await expect(page).toHaveTitle(/Sunday School CMS/)
+    await expect(page).toHaveTitle(/Lectionary Lessons/)
 
     const heading = page.locator('h1').first()
 
-    await expect(heading).toHaveText('Sunday School CMS')
+    await expect(heading).toHaveText(
+      'Scripture, art, study questions, and musings for the Revised Common Lectionary.',
+    )
   })
 })

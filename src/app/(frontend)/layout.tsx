@@ -2,7 +2,13 @@ import type { Metadata } from 'next'
 import React from 'react'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { SITE_DESCRIPTION, SITE_NAME, getCanonicalUrl, getMetadataBase } from '@/lib/share'
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_PUBLISHER,
+  getCanonicalUrl,
+  getMetadataBase,
+} from '@/lib/share'
 
 import './styles.css'
 
@@ -50,7 +56,10 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
         </main>
         <footer className="site-footer">
           <p>{SITE_NAME}</p>
-          <p>Published lessons are open to everyone. Drafts stay tucked away in the admin.</p>
+          <p>
+            Published by {SITE_PUBLISHER}. Published lessons are open to everyone. Drafts stay
+            tucked away in the admin.
+          </p>
         </footer>
       </body>
     </html>

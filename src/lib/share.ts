@@ -4,9 +4,12 @@ import { compact, getMedia } from './frontend'
 import { formatLessonDate } from './frontend'
 import { getLiturgicalTheme } from './liturgical-themes'
 
-export const SITE_NAME = 'St. Francis Adult Lectionary Education'
-export const SITE_TAGLINE = 'Scripture, art, study questions, and musings.'
+export const SITE_NAME = 'Lectionary Lessons'
+export const SITE_SUBTITLE = 'Revised Common Lectionary'
+export const SITE_TAGLINE =
+  'Scripture, art, study questions, and musings for the Revised Common Lectionary.'
 export const SITE_DESCRIPTION = SITE_TAGLINE
+export const SITE_PUBLISHER = 'St. Francis'
 
 export const OPEN_GRAPH_SIZE = {
   width: 1200,
@@ -40,6 +43,8 @@ export const getSiteOrigin = () =>
   'http://localhost:3000'
 
 export const getMetadataBase = () => new URL(getSiteOrigin())
+
+export const getSiteHostLabel = () => getMetadataBase().hostname.replace(/^www\./, '')
 
 export const toAbsoluteUrl = (value: string | null | undefined) => {
   if (!value) {

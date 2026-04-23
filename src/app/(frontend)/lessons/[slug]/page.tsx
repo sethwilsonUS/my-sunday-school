@@ -164,7 +164,7 @@ export default async function LessonPage({ params }: PageProps) {
           ) : null}
 
           {quotes.length > 0 ? (
-            <section className="content-section content-section--roomy quote-section">
+            <section className="content-section quote-section">
               <h2>Quotes</h2>
               <div className="quote-list">
                 {quotes.map((quote) => {
@@ -184,7 +184,7 @@ export default async function LessonPage({ params }: PageProps) {
           ) : null}
 
           {questions.length > 0 ? (
-            <section className="content-section content-section--roomy question-section">
+            <section className="content-section question-section">
               <h2>Study Questions</h2>
               <ol className="question-list">
                 {questions.map((question) => (
@@ -195,7 +195,7 @@ export default async function LessonPage({ params }: PageProps) {
           ) : null}
 
           {musingsHTML ? (
-            <section className="content-section content-section--roomy musings-section">
+            <section className="content-section musings-section">
               <h2>Musings</h2>
               <div className="musings-card season-border">
                 <div

@@ -15,11 +15,11 @@ export default async function HomePage() {
   return (
     <div className="page-shell">
       <section className="hero">
-        <div className="eyebrow">Published Sunday school resources</div>
+        <div className="eyebrow">Published lectionary resources</div>
         <h1>{SITE_TAGLINE}</h1>
         <p className="hero__lede">
-          A public lesson library shaped by the lectionary, built for students to read before
-          class and for teachers to find the next thread worth pulling.
+          A public lesson library shaped by the Revised Common Lectionary, built for study groups,
+          teachers, preachers, and anyone looking for the next thread worth pulling.
         </p>
         <div className="hero__actions">
           <Link className="button button--primary" href="/lessons">
