@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    lessons: Lesson;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +79,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    lessons: LessonsSelect<false> | LessonsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -123,6 +125,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  roles?: 'admin'[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -148,7 +151,11 @@ export interface User {
  */
 export interface Media {
   id: number;
-  alt: string;
+  altText: string;
+  artist?: string | null;
+  artistDates?: string | null;
+  workDate?: string | null;
+  wikimediaUrl?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -160,6 +167,91 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lessons".
+ */
+export interface Lesson {
+  id: number;
+  title: string;
+  /**
+   * Auto-generated from date and title when left blank.
+   */
+  slug: string;
+  date: string;
+  liturgicalSeason:
+    | 'advent'
+    | 'christmas'
+    | 'epiphany'
+    | 'lent'
+    | 'holy-week'
+    | 'easter'
+    | 'pentecost'
+    | 'ordinary-time';
+  lectionaryYear?: ('A' | 'B' | 'C') | null;
+  scriptures?:
+    | {
+        reference: string;
+        translation?: string | null;
+        passageText?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  studyQuestions?:
+    | {
+        question: string;
+        id?: string | null;
+      }[]
+    | null;
+  quotes?:
+    | {
+        text: string;
+        author?: string | null;
+        source?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  artworks?:
+    | {
+        image: number | Media;
+        caption?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  videoLinks?:
+    | {
+        label: string;
+        youtubeUrl: string;
+        id?: string | null;
+      }[]
+    | null;
+  links?:
+    | {
+        label: string;
+        url: string;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  notes?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  status: 'draft' | 'published';
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -192,6 +284,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'lessons';
+        value: number | Lesson;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -240,6 +336,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  roles?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -262,7 +359,11 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
+  altText?: T;
+  artist?: T;
+  artistDates?: T;
+  workDate?: T;
+  wikimediaUrl?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -274,6 +375,65 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lessons_select".
+ */
+export interface LessonsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  date?: T;
+  liturgicalSeason?: T;
+  lectionaryYear?: T;
+  scriptures?:
+    | T
+    | {
+        reference?: T;
+        translation?: T;
+        passageText?: T;
+        id?: T;
+      };
+  studyQuestions?:
+    | T
+    | {
+        question?: T;
+        id?: T;
+      };
+  quotes?:
+    | T
+    | {
+        text?: T;
+        author?: T;
+        source?: T;
+        id?: T;
+      };
+  artworks?:
+    | T
+    | {
+        image?: T;
+        caption?: T;
+        id?: T;
+      };
+  videoLinks?:
+    | T
+    | {
+        label?: T;
+        youtubeUrl?: T;
+        id?: T;
+      };
+  links?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        description?: T;
+        id?: T;
+      };
+  notes?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

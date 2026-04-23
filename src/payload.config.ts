@@ -1,5 +1,6 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -7,9 +8,12 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Lessons } from './collections/Lessons'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+const hasValidBlobToken = blobToken?.startsWith('vercel_blob_rw_') ?? false
 
 export default buildConfig({
   admin: {
@@ -18,7 +22,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Lessons],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -30,5 +34,14 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    vercelBlobStorage({
+      enabled: hasValidBlobToken,
+      collections: {
+        media: true,
+      },
+      token: blobToken,
+      clientUploads: true,
+    }),
+  ],
 })
