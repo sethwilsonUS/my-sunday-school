@@ -31,7 +31,13 @@ export const richTextToHTML = (value: unknown): string | null => {
   const html = convertLexicalToHTML({
     data: value,
     disableContainer: true,
+    disableIndent: true,
+    disableTextAlign: true,
   }).trim()
+  const cleanedHTML = html
+    .replaceAll('\u00a0', ' ')
+    .replace(/<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>/gi, '')
+    .trim()
 
-  return html || null
+  return cleanedHTML || null
 }
