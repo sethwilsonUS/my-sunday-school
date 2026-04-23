@@ -264,6 +264,10 @@ export const isAdmin: Access = ({ req }) => {
 | `/lessons` | All published lessons, filterable by season/year |
 | `/lessons/[slug]` | Individual lesson page |
 
+Phase 3 also includes the first production-polish pass: empty states for sparse content,
+404s for drafts or missing slugs, page metadata, responsive spacing, readable print styles,
+and keyboard-visible focus states throughout the public UI.
+
 Fetch data server-side using Payload's local API (since Payload and Next.js share the same process):[^3]
 
 ```ts
@@ -458,4 +462,3 @@ The following changes — and only these — are required to add Clerk later. No
 18. [Building AI-Native Applications with Payload CMS and the Vercel AI ...](https://finly.ch/engineering-blog/916926-building-ai-native-applications-with-payload-cms-and-the-vercel-ai-sdk) - A technical breakdown of how we use Payload CMS and the Vercel AI SDK to build AI-native FinSureTech...
 
 19. [Integrating Payload CMS with fully synced Clerk auth/identity ...](https://www.reddit.com/r/PayloadCMS/comments/1n2fvy5/integrating_payload_cms_with_fully_synced_clerk/) - This evening I took u/DanailMinchev's excellent payload-clerk-example and updated it to work with th...
-
