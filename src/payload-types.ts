@@ -194,6 +194,10 @@ export interface Lesson {
     | 'pentecost'
     | 'ordinary-time';
   lectionaryYear?: ('A' | 'B' | 'C') | null;
+  /**
+   * Paste the collect or prayer appointed for the day as plain text.
+   */
+  collect?: string | null;
   scriptures?:
     | {
         reference: string;
@@ -225,11 +229,19 @@ export interface Lesson {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Public lesson notes in Markdown. Supports headings, lists, emphasis, blockquotes, and links.
+   */
+  musings?: string | null;
   quotes?:
     | {
         text: string;
         author?: string | null;
         source?: string | null;
+        /**
+         * Optional publication or quotation year, such as 1962 or c. 415.
+         */
+        year?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -408,6 +420,7 @@ export interface LessonsSelect<T extends boolean = true> {
   date?: T;
   liturgicalSeason?: T;
   lectionaryYear?: T;
+  collect?: T;
   scriptures?:
     | T
     | {
@@ -422,12 +435,14 @@ export interface LessonsSelect<T extends boolean = true> {
         question?: T;
         id?: T;
       };
+  musings?: T;
   quotes?:
     | T
     | {
         text?: T;
         author?: T;
         source?: T;
+        year?: T;
         id?: T;
       };
   artworks?:

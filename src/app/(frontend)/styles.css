@@ -568,6 +568,10 @@ p {
   scroll-margin-top: 110px;
 }
 
+.content-section--roomy {
+  gap: 0.85rem;
+}
+
 .content-section > h2 {
   margin-bottom: 0;
   font-size: clamp(1.45rem, 2.4vw, 1.95rem);
@@ -580,6 +584,55 @@ p {
 .lesson-aside {
   display: grid;
   gap: 0.75rem;
+}
+
+.lesson-aside__section {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.lesson-aside__heading {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+  line-height: 1.05;
+}
+
+.collect-section {
+  gap: 0.6rem;
+}
+
+.collect-card {
+  display: grid;
+  gap: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--season-accent, var(--border)) 45%, var(--border));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--season-accent, var(--surface)) 7%, var(--surface)) 0%,
+      var(--surface) 55%,
+      color-mix(in srgb, var(--season-accent-dark, var(--surface)) 10%, var(--surface)) 100%
+    );
+  padding: 1rem 1.05rem 1.05rem;
+}
+
+.collect-card__eyebrow {
+  margin: 0;
+  color: color-mix(in srgb, var(--season-accent, var(--foreground)) 78%, var(--foreground));
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.collect-card__text {
+  margin: 0;
+  max-width: 42rem;
+  color: color-mix(in srgb, var(--foreground) 92%, var(--muted));
+  font-size: clamp(1.02rem, 1.45vw, 1.14rem);
+  font-style: italic;
+  line-height: 1.65;
+  text-wrap: pretty;
+  white-space: pre-line;
 }
 
 .scripture-card {
@@ -721,13 +774,36 @@ p {
 
 .question-list {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.75rem;
   margin: 0;
-  padding-left: 1.4rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: question;
 }
 
 .question-list li {
-  padding-left: 0.35rem;
+  position: relative;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--season-accent, var(--surface)) 6%, var(--surface));
+  padding: 0.9rem 0.95rem 0.95rem 3.1rem;
+}
+
+.question-list li::before {
+  position: absolute;
+  top: 0.78rem;
+  left: 0.9rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--season-accent, var(--foreground)) 18%, transparent);
+  color: color-mix(in srgb, var(--season-accent, var(--foreground)) 82%, var(--foreground));
+  content: counter(question);
+  counter-increment: question;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 blockquote {
@@ -740,6 +816,76 @@ blockquote {
 blockquote footer {
   color: var(--muted);
   font-size: 0.9rem;
+  margin-top: 0.55rem;
+}
+
+.musings-card {
+  border: 1px solid color-mix(in srgb, var(--season-accent, var(--border)) 38%, var(--border));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--season-accent, var(--surface)) 4%, var(--surface)) 0%,
+      var(--surface) 100%
+    );
+  padding: 1rem 1.05rem;
+}
+
+.markdown-content {
+  max-width: 42rem;
+  color: color-mix(in srgb, var(--foreground) 94%, var(--muted));
+  font-size: clamp(1rem, 1.35vw, 1.08rem);
+  line-height: 1.65;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 0 0 0.55rem;
+  line-height: 1.1;
+}
+
+.markdown-content h2 {
+  font-size: 1.35rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.15rem;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content blockquote {
+  margin-bottom: 0.65rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.35rem;
+}
+
+.markdown-content li + li {
+  margin-top: 0.28rem;
+}
+
+.markdown-content a {
+  color: color-mix(in srgb, var(--season-accent, var(--link)) 72%, var(--link));
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+
+.markdown-content code {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  padding: 0.08rem 0.35rem;
+  font-size: 0.9em;
 }
 
 .resource-list a {
@@ -903,6 +1049,8 @@ blockquote footer {
   width: fit-content;
   max-width: min(calc(100vw - 3rem), 1200px);
   max-height: calc(100dvh - 12rem);
+  justify-self: center;
+  align-self: center;
   place-items: center;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 92%, transparent), var(--surface)),
@@ -912,6 +1060,7 @@ blockquote footer {
 }
 
 .artwork-lightbox__image {
+  display: block;
   max-width: min(calc(100vw - 5rem), 1200px);
   max-height: calc(100dvh - 14rem);
   width: auto;

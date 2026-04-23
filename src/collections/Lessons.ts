@@ -75,6 +75,14 @@ export const Lessons: CollectionConfig = {
       options: ['A', 'B', 'C'],
     },
     {
+      name: 'collect',
+      label: 'Collect of the Day',
+      type: 'textarea',
+      admin: {
+        description: 'Paste the collect or prayer appointed for the day as plain text.',
+      },
+    },
+    {
       name: 'scriptures',
       type: 'array',
       fields: [
@@ -117,6 +125,16 @@ export const Lessons: CollectionConfig = {
       ],
     },
     {
+      name: 'musings',
+      type: 'textarea',
+      admin: {
+        description:
+          'Public lesson notes in Markdown. Supports headings, lists, emphasis, blockquotes, and links.',
+        placeholder:
+          '## A thread worth pulling\n\nWrite a few reflections, questions, or teaching notes here in Markdown.',
+      },
+    },
+    {
       name: 'quotes',
       type: 'array',
       fields: [
@@ -132,6 +150,13 @@ export const Lessons: CollectionConfig = {
         {
           name: 'source',
           type: 'text',
+        },
+        {
+          name: 'year',
+          type: 'text',
+          admin: {
+            description: 'Optional publication or quotation year, such as 1962 or c. 415.',
+          },
         },
       ],
     },

@@ -7,6 +7,7 @@ import { ArtworkCard } from '@/components/ArtworkCard'
 import { compact, formatLessonDate, getMedia, getMediaUrl } from '@/lib/frontend'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
+import { markdownToHTML } from '@/lib/markdown'
 import { richTextToHTML } from '@/lib/richText'
 import { SITE_NAME, getCanonicalUrl, getLessonMetadataLabel, getLessonPath } from '@/lib/share'
 
@@ -76,7 +77,16 @@ export default async function LessonPage({ params }: PageProps) {
   const artworks = compact(lesson.artworks)
   const videos = compact(lesson.videoLinks)
   const links = compact(lesson.links)
-  const hasStudyMaterial = scriptures.length > 0 || questions.length > 0
+  const hasAsideResources = videos.length > 0 || links.length > 0
+  const musingsHTML = markdownToHTML(lesson.musings)
+  const hasLessonContent =
+    Boolean(lesson.collect) ||
+    Boolean(musingsHTML) ||
+    scriptures.length > 0 ||
+    questions.length > 0 ||
+    quotes.length > 0 ||
+    videos.length > 0 ||
+    links.length > 0
 
   return (
     <article
@@ -102,13 +112,23 @@ export default async function LessonPage({ params }: PageProps) {
 
       <div className="lesson-layout">
         <div className="lesson-main">
-          {!hasStudyMaterial ? (
+          {!hasLessonContent ? (
             <section className="empty-state">
               <h2>Study material coming soon</h2>
               <p>
                 This lesson is published and ready to preview, with scriptures and questions still
                 being gathered.
               </p>
+            </section>
+          ) : null}
+
+          {lesson.collect ? (
+            <section className="content-section collect-section" aria-labelledby="collect-heading">
+              <h2 id="collect-heading">Collect</h2>
+              <div className="collect-card season-border">
+                <p className="collect-card__eyebrow">Prayer of the day</p>
+                <p className="collect-card__text">{lesson.collect}</p>
+              </div>
             </section>
           ) : null}
 
@@ -143,8 +163,28 @@ export default async function LessonPage({ params }: PageProps) {
             </section>
           ) : null}
 
+          {quotes.length > 0 ? (
+            <section className="content-section content-section--roomy quote-section">
+              <h2>Quotes</h2>
+              <div className="quote-list">
+                {quotes.map((quote) => {
+                  const attribution = [quote.author, quote.source, quote.year]
+                    .filter(Boolean)
+                    .join(', ')
+
+                  return (
+                    <blockquote key={quote.id ?? quote.text}>
+                      <p>{quote.text}</p>
+                      {attribution ? <footer>{attribution}</footer> : null}
+                    </blockquote>
+                  )
+                })}
+              </div>
+            </section>
+          ) : null}
+
           {questions.length > 0 ? (
-            <section className="content-section">
+            <section className="content-section content-section--roomy question-section">
               <h2>Study Questions</h2>
               <ol className="question-list">
                 {questions.map((question) => (
@@ -154,42 +194,14 @@ export default async function LessonPage({ params }: PageProps) {
             </section>
           ) : null}
 
-          {quotes.length > 0 ? (
-            <section className="content-section">
-              <h2>Quotes</h2>
-              <div className="quote-list">
-                {quotes.map((quote) => (
-                  <blockquote key={quote.id ?? quote.text}>
-                    <p>{quote.text}</p>
-                    {quote.author || quote.source ? (
-                      <footer>
-                        {quote.author}
-                        {quote.author && quote.source ? ', ' : ''}
-                        {quote.source}
-                      </footer>
-                    ) : null}
-                  </blockquote>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {videos.length > 0 || links.length > 0 ? (
-            <section className="content-section">
-              <h2>Resources</h2>
-              <div className="resource-list">
-                {videos.map((video) => (
-                  <a key={video.id ?? video.youtubeUrl} href={video.youtubeUrl}>
-                    <span>{video.label}</span>
-                    <span>Video</span>
-                  </a>
-                ))}
-                {links.map((link) => (
-                  <a key={link.id ?? link.url} href={link.url}>
-                    <span>{link.label}</span>
-                    {link.description ? <span>{link.description}</span> : <span>Link</span>}
-                  </a>
-                ))}
+          {musingsHTML ? (
+            <section className="content-section content-section--roomy musings-section">
+              <h2>Musings</h2>
+              <div className="musings-card season-border">
+                <div
+                  className="markdown-content musings-markdown"
+                  dangerouslySetInnerHTML={{ __html: musingsHTML }}
+                />
               </div>
             </section>
           ) : null}
@@ -214,11 +226,31 @@ export default async function LessonPage({ params }: PageProps) {
                 />
               )
             })
-          ) : (
+          ) : !hasAsideResources ? (
             <div className="empty-state empty-state--compact">
               <p>Artwork can be added from the Payload admin when it is ready.</p>
             </div>
-          )}
+          ) : null}
+
+          {hasAsideResources ? (
+            <section className="lesson-aside__section">
+              <h2 className="lesson-aside__heading">Resources</h2>
+              <div className="resource-list">
+                {videos.map((video) => (
+                  <a key={video.id ?? video.youtubeUrl} href={video.youtubeUrl}>
+                    <span>{video.label}</span>
+                    <span>Video</span>
+                  </a>
+                ))}
+                {links.map((link) => (
+                  <a key={link.id ?? link.url} href={link.url}>
+                    <span>{link.label}</span>
+                    {link.description ? <span>{link.description}</span> : <span>Link</span>}
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </aside>
       </div>
     </article>
