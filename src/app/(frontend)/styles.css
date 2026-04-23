@@ -575,8 +575,20 @@ p {
   hanging-punctuation: first last;
 }
 
+.scripture-text .scripture-superscription {
+  margin-bottom: 0.85rem;
+  color: color-mix(in srgb, var(--foreground) 72%, var(--muted));
+  font-size: 0.95em;
+  font-style: italic;
+  text-align: center;
+}
+
 .scripture-text p + p {
   margin-top: 0.2rem;
+}
+
+.scripture-text .scripture-superscription + p {
+  margin-top: 0;
 }
 
 .question-list {

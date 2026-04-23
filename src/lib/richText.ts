@@ -17,6 +17,29 @@ const isSerializedEditorState = (
   'root' in value &&
   typeof (value as { root?: unknown }).root === 'object'
 
+const psalmSuperscriptions = ['A Psalm of David. ', 'A Psalm of David']
+
+const promotePsalmSuperscription = (html: string) =>
+  html.replace(/^<p>([^<]+)<\/p>/, (paragraph, text: string) => {
+    const trimmedText = text.trim()
+
+    for (const superscription of psalmSuperscriptions) {
+      if (trimmedText === superscription.trim()) {
+        return `<p class="scripture-superscription">${trimmedText}</p>`
+      }
+
+      if (trimmedText.startsWith(superscription)) {
+        const passageText = trimmedText.slice(superscription.length).trimStart()
+
+        if (/^[A-Z"']/.test(passageText)) {
+          return `<p class="scripture-superscription">${superscription.trim()}</p><p>${passageText}</p>`
+        }
+      }
+    }
+
+    return paragraph
+  })
+
 export const richTextToHTML = (value: unknown): string | null => {
   if (typeof value === 'string') {
     const text = value.trim()
@@ -39,5 +62,5 @@ export const richTextToHTML = (value: unknown): string | null => {
     .replace(/<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>/gi, '')
     .trim()
 
-  return cleanedHTML || null
+  return promotePsalmSuperscription(cleanedHTML) || null
 }
