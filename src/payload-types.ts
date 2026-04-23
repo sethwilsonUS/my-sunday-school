@@ -154,6 +154,10 @@ export interface Media {
   altText: string;
   artist?: string | null;
   artistDates?: string | null;
+  /**
+   * Optional material or technique, such as "oil on canvas".
+   */
+  medium?: string | null;
   workDate?: string | null;
   wikimediaUrl?: string | null;
   updatedAt: string;
@@ -194,7 +198,24 @@ export interface Lesson {
     | {
         reference: string;
         translation?: string | null;
-        passageText?: string | null;
+        /**
+         * Recommended Logos format: Bible paragraphs, no footnotes, no citation. Keep verse numbers out unless this lesson specifically needs them.
+         */
+        passageText?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
         id?: string | null;
       }[]
     | null;
@@ -362,6 +383,7 @@ export interface MediaSelect<T extends boolean = true> {
   altText?: T;
   artist?: T;
   artistDates?: T;
+  medium?: T;
   workDate?: T;
   wikimediaUrl?: T;
   updatedAt?: T;

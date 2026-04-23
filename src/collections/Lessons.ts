@@ -90,7 +90,18 @@ export const Lessons: CollectionConfig = {
         },
         {
           name: 'passageText',
-          type: 'textarea',
+          type: 'richText',
+          label: 'Passage Text',
+          editor: lexicalEditor({
+            admin: {
+              placeholder:
+                'Paste from Logos Copy Bible Verses using Bible paragraphs, no footnotes, no citation.',
+            },
+          }),
+          admin: {
+            description:
+              'Recommended Logos format: Bible paragraphs, no footnotes, no citation. Keep verse numbers out unless this lesson specifically needs them.',
+          },
         },
       ],
     },

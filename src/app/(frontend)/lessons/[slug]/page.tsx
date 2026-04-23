@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { compact, formatLessonDate, getMedia, getMediaUrl } from '@/lib/frontend'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
+import { richTextToHTML } from '@/lib/richText'
 
 type PageProps = {
   params: Promise<{
@@ -95,7 +96,14 @@ export default async function LessonPage({ params }: PageProps) {
                   <article key={scripture.id ?? scripture.reference} className="scripture-card">
                     <h3>{scripture.reference}</h3>
                     <p className="muted">{scripture.translation ?? 'NRSV-UE'}</p>
-                    {scripture.passageText ? <p>{scripture.passageText}</p> : null}
+                    {scripture.passageText ? (
+                      <div
+                        className="rich-text scripture-text"
+                        dangerouslySetInnerHTML={{
+                          __html: richTextToHTML(scripture.passageText) ?? '',
+                        }}
+                      />
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -169,6 +177,7 @@ export default async function LessonPage({ params }: PageProps) {
                   <figcaption>
                     {artwork.caption ? <span>{artwork.caption}</span> : null}
                     {media?.artist ? <span>{media.artist}</span> : null}
+                    {media?.medium ? <span>{media.medium}</span> : null}
                     {media?.workDate ? <span>{media.workDate}</span> : null}
                     {media?.wikimediaUrl ? (
                       <a href={media.wikimediaUrl} rel="noopener noreferrer" target="_blank">

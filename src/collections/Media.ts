@@ -25,6 +25,13 @@ export const Media: CollectionConfig = {
       type: 'text',
     },
     {
+      name: 'medium',
+      type: 'text',
+      admin: {
+        description: 'Optional material or technique, such as "oil on canvas".',
+      },
+    },
+    {
       name: 'workDate',
       type: 'text',
     },

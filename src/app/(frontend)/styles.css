@@ -541,8 +541,29 @@ p {
   padding: 1.2rem;
 }
 
-.scripture-card p:last-child {
+.scripture-card p:last-child,
+.rich-text > :last-child {
   margin-bottom: 0;
+}
+
+.rich-text {
+  color: var(--foreground);
+}
+
+.rich-text p,
+.rich-text ul,
+.rich-text ol,
+.rich-text blockquote {
+  margin-bottom: 0.9rem;
+}
+
+.rich-text ul,
+.rich-text ol {
+  padding-left: 1.4rem;
+}
+
+.scripture-text {
+  margin-top: 1rem;
   white-space: pre-wrap;
 }
 
