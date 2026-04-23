@@ -199,7 +199,7 @@ export interface Lesson {
         reference: string;
         translation?: string | null;
         /**
-         * Recommended Logos format: Bible paragraphs, no footnotes, no citation. Keep verse numbers out unless this lesson specifically needs them.
+         * Recommended Logos format: Bible paragraphs with verse numbers, no footnotes, no citation. The public site styles verse numbers as superscripts and tightens wrapped poetic lines.
          */
         passageText?: {
           root: {

@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { ArtworkCard } from '@/components/ArtworkCard'
 import { compact, formatLessonDate, getMedia, getMediaUrl } from '@/lib/frontend'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
@@ -93,18 +94,27 @@ export default async function LessonPage({ params }: PageProps) {
               <h2>Scripture</h2>
               <div className="scripture-list">
                 {scriptures.map((scripture) => (
-                  <article key={scripture.id ?? scripture.reference} className="scripture-card">
-                    <h3>{scripture.reference}</h3>
-                    <p className="muted">{scripture.translation ?? 'NRSV-UE'}</p>
-                    {scripture.passageText ? (
-                      <div
-                        className="rich-text scripture-text"
-                        dangerouslySetInnerHTML={{
-                          __html: richTextToHTML(scripture.passageText) ?? '',
-                        }}
-                      />
-                    ) : null}
-                  </article>
+                  <details
+                    key={scripture.id ?? scripture.reference}
+                    className="scripture-card scripture-accordion"
+                  >
+                    <summary>
+                      <span className="scripture-accordion__reference">
+                        {scripture.reference}
+                      </span>
+                    </summary>
+                    <div className="scripture-accordion__content">
+                      <p className="muted">{scripture.translation ?? 'NRSV-UE'}</p>
+                      {scripture.passageText ? (
+                        <div
+                          className="rich-text scripture-text"
+                          dangerouslySetInnerHTML={{
+                            __html: richTextToHTML(scripture.passageText) ?? '',
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                  </details>
                 ))}
               </div>
             </section>
@@ -169,23 +179,16 @@ export default async function LessonPage({ params }: PageProps) {
               const mediaUrl = getMediaUrl(artwork.image)
 
               return (
-                <figure key={artwork.id ?? media?.id ?? artwork.caption} className="artwork-card">
-                  {mediaUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt={media?.altText ?? ''} src={mediaUrl} />
-                  ) : null}
-                  <figcaption>
-                    {artwork.caption ? <span>{artwork.caption}</span> : null}
-                    {media?.artist ? <span>{media.artist}</span> : null}
-                    {media?.medium ? <span>{media.medium}</span> : null}
-                    {media?.workDate ? <span>{media.workDate}</span> : null}
-                    {media?.wikimediaUrl ? (
-                      <a href={media.wikimediaUrl} rel="noopener noreferrer" target="_blank">
-                        Wikimedia Commons
-                      </a>
-                    ) : null}
-                  </figcaption>
-                </figure>
+                <ArtworkCard
+                  alt={media?.altText ?? artwork.caption ?? 'Artwork'}
+                  artist={media?.artist}
+                  caption={artwork.caption}
+                  key={artwork.id ?? media?.id ?? artwork.caption}
+                  medium={media?.medium}
+                  sourceUrl={media?.wikimediaUrl}
+                  src={mediaUrl}
+                  workDate={media?.workDate}
+                />
               )
             })
           ) : (
