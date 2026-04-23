@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { BrandMark } from './BrandMark'
 import { ThemeToggle } from './ThemeToggle'
 
 export function SiteHeader() {
@@ -7,7 +8,7 @@ export function SiteHeader() {
     <header className="site-header">
       <Link aria-label="Sunday School home" className="brand" href="/">
         <span aria-hidden="true" className="brand__mark">
-          SS
+          <BrandMark size={28} />
         </span>
         <span className="brand__text">
           <span>Sunday School</span>

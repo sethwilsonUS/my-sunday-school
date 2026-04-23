@@ -1,14 +1,32 @@
+import type { Metadata } from 'next'
 import React from 'react'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { SITE_DESCRIPTION, SITE_NAME, getCanonicalUrl, getMetadataBase } from '@/lib/share'
 
 import './styles.css'
 
-export const metadata = {
-  description: 'Published Sunday school lessons, scripture notes, artwork, and study questions.',
+export const metadata: Metadata = {
+  alternates: {
+    canonical: getCanonicalUrl('/'),
+  },
+  description: SITE_DESCRIPTION,
+  metadataBase: getMetadataBase(),
+  openGraph: {
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    type: 'website',
+    url: getCanonicalUrl('/'),
+  },
   title: {
-    default: 'Sunday School Lectionary Notes',
-    template: '%s | Sunday School Lectionary Notes',
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    description: SITE_DESCRIPTION,
+    title: SITE_NAME,
   },
 }
 
@@ -31,7 +49,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
           {children}
         </main>
         <footer className="site-footer">
-          <p>Sunday School Lectionary Notes</p>
+          <p>{SITE_NAME}</p>
           <p>Published lessons are open to everyone. Drafts stay tucked away in the admin.</p>
         </footer>
       </body>

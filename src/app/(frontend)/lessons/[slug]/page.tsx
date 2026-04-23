@@ -8,6 +8,7 @@ import { compact, formatLessonDate, getMedia, getMediaUrl } from '@/lib/frontend
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
 import { richTextToHTML } from '@/lib/richText'
+import { SITE_NAME, getCanonicalUrl, getLessonMetadataLabel, getLessonPath } from '@/lib/share'
 
 type PageProps = {
   params: Promise<{
@@ -32,9 +33,31 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
+  const canonicalPath = getLessonPath(slug)
+  const description = `Study notes and resources for ${lesson.title}.`
+  const lessonMetaLabel = getLessonMetadataLabel(lesson)
+  const metadataTitle = `${lesson.title} | ${lessonMetaLabel}`
+
   return {
-    description: `Study notes and resources for ${lesson.title}.`,
-    title: lesson.title,
+    alternates: {
+      canonical: getCanonicalUrl(canonicalPath),
+    },
+    description,
+    openGraph: {
+      description,
+      siteName: SITE_NAME,
+      title: metadataTitle,
+      type: 'article',
+      url: getCanonicalUrl(canonicalPath),
+    },
+    title: {
+      absolute: metadataTitle,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      description,
+      title: metadataTitle,
+    },
   }
 }
 

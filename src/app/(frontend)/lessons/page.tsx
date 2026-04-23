@@ -1,8 +1,10 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { LessonCard } from '@/components/LessonCard'
 import { SEASON_OPTIONS, type LiturgicalSeason } from '@/lib/liturgical-themes'
 import { getPublishedLessons, type LessonFilters } from '@/lib/lessons'
+import { SITE_NAME, getCanonicalUrl } from '@/lib/share'
 
 const YEAR_OPTIONS = ['A', 'B', 'C'] as const
 
@@ -24,9 +26,26 @@ const getFilters = (searchParams: SearchParams): LessonFilters => {
   return { season, year }
 }
 
-export const metadata = {
-  description: 'Browse published Sunday school lessons by liturgical season and lectionary year.',
+const description = 'Browse published Sunday school lessons by liturgical season and lectionary year.'
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: getCanonicalUrl('/lessons'),
+  },
+  description,
+  openGraph: {
+    description,
+    siteName: SITE_NAME,
+    title: 'Lessons',
+    type: 'website',
+    url: getCanonicalUrl('/lessons'),
+  },
   title: 'Lessons',
+  twitter: {
+    card: 'summary_large_image',
+    description,
+    title: `Lessons | ${SITE_NAME}`,
+  },
 }
 
 export default async function LessonsPage({

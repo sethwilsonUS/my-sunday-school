@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { LessonCard } from '@/components/LessonCard'
 import { formatLessonDate } from '@/lib/frontend'
 import { getPublishedLessons } from '@/lib/lessons'
+import { SITE_TAGLINE } from '@/lib/share'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ export default async function HomePage() {
     <div className="page-shell">
       <section className="hero">
         <div className="eyebrow">Published Sunday school resources</div>
-        <h1>Scripture, art, and questions for the next faithful conversation.</h1>
+        <h1>{SITE_TAGLINE}</h1>
         <p className="hero__lede">
           A public lesson library shaped by the lectionary, built for students to read before
           class and for teachers to find the next thread worth pulling.
