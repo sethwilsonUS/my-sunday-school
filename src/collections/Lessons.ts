@@ -95,12 +95,12 @@ export const Lessons: CollectionConfig = {
           editor: lexicalEditor({
             admin: {
               placeholder:
-                'Paste from Logos Copy Bible Verses using Bible paragraphs, no footnotes, no citation.',
+                'Paste from Logos Copy Bible Verses using Bible paragraphs, verse numbers, no footnotes, no citation.',
             },
           }),
           admin: {
             description:
-              'Recommended Logos format: Bible paragraphs, no footnotes, no citation. Keep verse numbers out unless this lesson specifically needs them.',
+              'Recommended Logos format: Bible paragraphs with verse numbers, no footnotes, no citation. The public site styles verse numbers as superscripts and tightens wrapped poetic lines.',
           },
         },
       ],

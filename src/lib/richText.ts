@@ -19,6 +19,31 @@ const isSerializedEditorState = (
 
 const psalmSuperscriptions = ['A Psalm of David. ', 'A Psalm of David']
 
+const addClassToTag = (tag: string, className: string) => {
+  const classAttribute = tag.match(/\sclass=(["'])(.*?)\1/)
+
+  if (classAttribute) {
+    const classes = classAttribute[2].split(/\s+/)
+
+    if (classes.includes(className)) {
+      return tag
+    }
+
+    return tag.replace(
+      classAttribute[0],
+      ` class=${classAttribute[1]}${classes.join(' ')} ${className}${classAttribute[1]}`,
+    )
+  }
+
+  return tag.replace(/>$/, ` class="${className}">`)
+}
+
+const addParagraphClass = (paragraph: string, className: string) =>
+  paragraph.replace(/^<p\b[^>]*>/i, (tag) => addClassToTag(tag, className))
+
+const addSuperscriptClass = (superscript: string) =>
+  superscript.replace(/^<sup\b[^>]*>/i, (tag) => addClassToTag(tag, 'scripture-verse-number'))
+
 const promotePsalmSuperscription = (html: string) =>
   html.replace(/^<p>([^<]+)<\/p>/, (paragraph, text: string) => {
     const trimmedText = text.trim()
@@ -39,6 +64,43 @@ const promotePsalmSuperscription = (html: string) =>
 
     return paragraph
   })
+
+const styleScriptureLines = (html: string) =>
+  html.replace(
+    /<p\b(?![^>]*\bscripture-superscription\b)[^>]*>(.*?)<\/p>/gis,
+    (paragraph, content: string) => {
+      const leadingSuperscript = content.match(
+        /^(\s*)(<sup\b[^>]*>\s*(\d{1,3})\s*<\/sup>)(\s*)/i,
+      )
+
+      if (leadingSuperscript) {
+        const styledSuperscript = addSuperscriptClass(leadingSuperscript[2])
+        const styledContent = content.replace(
+          leadingSuperscript[0],
+          `${leadingSuperscript[1]}${styledSuperscript} `,
+        )
+
+        return addParagraphClass(
+          paragraph.replace(content, styledContent),
+          'scripture-verse-start',
+        )
+      }
+
+      const leadingNumber = content.match(/^(\s*)(\d{1,3})(?:[\s.)]+|(?=[A-Z"']))(.*)$/s)
+
+      if (leadingNumber) {
+        const verseNumber = `<sup class="scripture-verse-number">${leadingNumber[2]}</sup>`
+        const styledContent = `${leadingNumber[1]}${verseNumber} ${leadingNumber[3].trimStart()}`
+
+        return addParagraphClass(
+          paragraph.replace(content, styledContent),
+          'scripture-verse-start',
+        )
+      }
+
+      return addParagraphClass(paragraph, 'scripture-line')
+    },
+  )
 
 export const richTextToHTML = (value: unknown): string | null => {
   if (typeof value === 'string') {
@@ -62,5 +124,5 @@ export const richTextToHTML = (value: unknown): string | null => {
     .replace(/<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>/gi, '')
     .trim()
 
-  return promotePsalmSuperscription(cleanedHTML) || null
+  return styleScriptureLines(promotePsalmSuperscription(cleanedHTML)) || null
 }

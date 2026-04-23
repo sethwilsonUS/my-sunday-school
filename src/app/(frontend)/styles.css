@@ -567,7 +567,7 @@ p {
   max-width: 42rem;
   color: color-mix(in srgb, var(--foreground) 88%, var(--muted));
   font-size: clamp(1.05rem, 1.5vw, 1.2rem);
-  line-height: 1.72;
+  line-height: 1.55;
 }
 
 .scripture-text p {
@@ -580,15 +580,33 @@ p {
   color: color-mix(in srgb, var(--foreground) 72%, var(--muted));
   font-size: 0.95em;
   font-style: italic;
+  line-height: 1.35;
   text-align: center;
 }
 
-.scripture-text p + p {
-  margin-top: 0.2rem;
+.scripture-text .scripture-line {
+  margin-top: 0.08rem;
 }
 
-.scripture-text .scripture-superscription + p {
+.scripture-text .scripture-verse-start {
+  margin-top: 0.7rem;
+}
+
+.scripture-text .scripture-superscription + p,
+.scripture-text .scripture-verse-start:first-child {
   margin-top: 0;
+}
+
+.scripture-text .scripture-verse-number {
+  display: inline-block;
+  min-width: 1.15em;
+  color: color-mix(in srgb, var(--season-accent, var(--foreground)) 72%, var(--foreground));
+  font-size: 0.68em;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  text-align: left;
+  transform: translateY(-0.3em);
 }
 
 .question-list {
