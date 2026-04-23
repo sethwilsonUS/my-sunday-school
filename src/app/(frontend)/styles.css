@@ -926,7 +926,7 @@ blockquote footer {
   position: relative;
   display: grid;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: var(--artwork-aspect-ratio, 4 / 5);
   place-items: center;
   border-bottom: 1px solid var(--border);
   background:

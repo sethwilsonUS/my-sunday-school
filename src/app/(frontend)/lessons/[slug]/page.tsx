@@ -218,6 +218,8 @@ export default async function LessonPage({ params }: PageProps) {
                   alt={media?.altText ?? artwork.caption ?? 'Artwork'}
                   artist={media?.artist}
                   caption={artwork.caption}
+                  imageHeight={media?.height}
+                  imageWidth={media?.width}
                   key={artwork.id ?? media?.id ?? artwork.caption}
                   medium={media?.medium}
                   sourceUrl={media?.wikimediaUrl}

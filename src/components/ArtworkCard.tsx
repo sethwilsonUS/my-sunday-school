@@ -1,11 +1,13 @@
 'use client'
 
-import { MouseEvent, useRef } from 'react'
+import { CSSProperties, MouseEvent, useRef } from 'react'
 
 type ArtworkCardProps = {
   alt: string
   artist?: string | null
   caption?: string | null
+  imageHeight?: number | null
+  imageWidth?: number | null
   medium?: string | null
   sourceLabel?: string
   sourceUrl?: string | null
@@ -17,6 +19,8 @@ export function ArtworkCard({
   alt,
   artist,
   caption,
+  imageHeight,
+  imageWidth,
   medium,
   sourceLabel = 'View on Wikimedia Commons',
   sourceUrl,
@@ -27,6 +31,10 @@ export function ArtworkCard({
 
   const metadata = [artist, medium, workDate].filter(Boolean) as string[]
   const dialogTitle = (caption ?? alt) || 'Artwork'
+  const imageShellStyle =
+    imageWidth && imageHeight
+      ? ({ '--artwork-aspect-ratio': `${imageWidth} / ${imageHeight}` } as CSSProperties)
+      : undefined
 
   const closeLightbox = () => {
     dialogRef.current?.close()
@@ -56,7 +64,7 @@ export function ArtworkCard({
             onClick={openLightbox}
             type="button"
           >
-            <span className="artwork-card__image-shell">
+            <span className="artwork-card__image-shell" style={imageShellStyle}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img alt={alt} className="artwork-card__image" src={src} />
               <span className="artwork-card__zoom-hint">Open full image</span>
