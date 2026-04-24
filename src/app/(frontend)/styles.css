@@ -278,7 +278,7 @@ p {
   display: grid;
   align-content: start;
   gap: 0.45rem;
-  padding: clamp(2.5rem, 6vw, 4.25rem) 0 clamp(2rem, 5vw, 3rem);
+  padding: clamp(1.8rem, 4.5vw, 3rem) 0 clamp(1.5rem, 3.8vw, 2.35rem);
 }
 
 .eyebrow,
@@ -297,17 +297,17 @@ p {
 }
 
 .hero > h1 {
-  max-width: 12.5ch;
-  margin-bottom: 0.55rem;
-  font-size: clamp(2.7rem, 6vw, 4.75rem);
-  line-height: 0.98;
-  text-wrap: pretty;
+  max-width: 13.5ch;
+  margin-bottom: 0.35rem;
+  font-size: clamp(2.2rem, 4.75vw, 3.85rem);
+  line-height: 0.99;
+  text-wrap: balance;
 }
 
 .hero__lede {
   max-width: 42rem;
   color: var(--muted);
-  font-size: clamp(1.05rem, 1.6vw, 1.28rem);
+  font-size: clamp(1rem, 1.35vw, 1.16rem);
 }
 
 .page-intro p {
@@ -389,12 +389,35 @@ p {
 }
 
 .featured-lesson {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(15rem, 0.8fr);
+  gap: clamp(0.9rem, 2.8vw, 1.35rem);
+  align-items: start;
   padding: clamp(1rem, 2.4vw, 1.35rem);
+}
+
+.featured-lesson--text-only {
+  grid-template-columns: 1fr;
+}
+
+.featured-lesson__content {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.featured-lesson--portrait .featured-lesson__content {
+  align-self: center;
 }
 
 .featured-lesson__date,
 .muted {
   color: var(--muted);
+}
+
+.featured-lesson__details {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.94rem;
 }
 
 .featured-lesson h3 a,
@@ -412,6 +435,30 @@ p {
 .lesson-strip,
 .page-intro {
   padding: clamp(1.6rem, 4vw, 3rem) 0;
+}
+
+.featured-lesson__media {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.featured-lesson__image-shell {
+  display: grid;
+  width: 100%;
+  aspect-ratio: var(--featured-artwork-aspect-ratio, 4 / 5);
+  place-items: center;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, transparent), var(--surface)),
+    linear-gradient(135deg, rgb(139 26 26 / 0.06), rgb(31 111 80 / 0.05));
+  padding: 0.7rem;
+}
+
+.featured-lesson__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .page-intro h1 {
@@ -1126,6 +1173,14 @@ blockquote footer {
   .lesson-layout,
   .filter-panel fieldset {
     grid-template-columns: 1fr;
+  }
+
+  .featured-lesson {
+    grid-template-columns: 1fr;
+  }
+
+  .featured-lesson__media {
+    order: -1;
   }
 
   .filter-panel__actions {

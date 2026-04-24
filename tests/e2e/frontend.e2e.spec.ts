@@ -18,5 +18,9 @@ test.describe('Frontend', () => {
     await expect(heading).toHaveText(
       'Scripture, art, study questions, and musings for the Revised Common Lectionary.',
     )
+
+    await expect(page.getByRole('link', { name: 'Browse lessons' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Open admin' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0)
   })
 })

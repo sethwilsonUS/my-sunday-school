@@ -18,7 +18,6 @@ export function SiteHeader() {
       </Link>
       <nav aria-label="Primary navigation" className="site-nav">
         <Link href="/lessons">Lessons</Link>
-        <Link href="/admin">Admin</Link>
         <ThemeToggle />
       </nav>
     </header>
