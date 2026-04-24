@@ -74,7 +74,9 @@ export default async function HomePage() {
           >
             <div className="featured-lesson__content">
               <div className="featured-lesson__meta">
-                <span className="season-badge">{featuredTheme?.label ?? 'Lesson'}</span>
+                <span className="season-badge featured-lesson__badge">
+                  {featuredTheme?.label ?? 'Lesson'}
+                </span>
                 <time dateTime={featuredLesson.date}>{formatLessonDate(featuredLesson.date)}</time>
               </div>
               <h3>
