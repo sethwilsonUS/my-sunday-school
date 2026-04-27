@@ -64,7 +64,8 @@ export const Lessons: CollectionConfig = {
               required: true,
               unique: true,
               admin: {
-                description: 'Auto-generated from date and title when left blank. Used in the public lesson URL.',
+                description:
+                  'Auto-generated from date and title when left blank. Used in the public lesson URL.',
               },
             },
             {
@@ -161,7 +162,8 @@ export const Lessons: CollectionConfig = {
               type: 'array',
               label: 'Study Questions',
               admin: {
-                description: 'Add open-ended prompts that can carry conversation for a class or discussion group.',
+                description:
+                  'Add open-ended prompts that can carry conversation for a class or discussion group.',
               },
               fields: [
                 {
@@ -176,13 +178,43 @@ export const Lessons: CollectionConfig = {
             },
             {
               name: 'musings',
-              type: 'textarea',
+              type: 'array',
+              label: 'Musings',
               admin: {
                 description:
-                  'Public lesson notes in Markdown. Supports headings, lists, emphasis, blockquotes, and links.',
-                placeholder:
-                  '## A thread worth pulling\n\nWrite a few reflections, questions, or teaching notes here in Markdown.',
+                  'Add public reflections in Markdown. Each musing can stand on its own with a title and author.',
               },
+              fields: [
+                {
+                  name: 'title',
+                  type: 'text',
+                  required: true,
+                  admin: {
+                    placeholder: 'A thread worth pulling',
+                  },
+                },
+                {
+                  name: 'body',
+                  type: 'textarea',
+                  required: true,
+                  label: 'Body (Markdown)',
+                  admin: {
+                    description: 'Supports headings, lists, emphasis, blockquotes, and links.',
+                    placeholder:
+                      'Write a few reflections, questions, or teaching notes here in Markdown.',
+                  },
+                },
+                {
+                  name: 'author',
+                  type: 'text',
+                  required: true,
+                  admin: {
+                    description:
+                      'Plain text for now. This can become an author relationship later.',
+                    placeholder: 'Seth Wilson',
+                  },
+                },
+              ],
             },
             {
               type: 'collapsible',
@@ -226,7 +258,8 @@ export const Lessons: CollectionConfig = {
                       name: 'year',
                       type: 'text',
                       admin: {
-                        description: 'Optional publication or quotation year, such as 1962 or c. 415.',
+                        description:
+                          'Optional publication or quotation year, such as 1962 or c. 415.',
                         placeholder: '1633',
                       },
                     },
@@ -275,7 +308,8 @@ export const Lessons: CollectionConfig = {
                   type: 'array',
                   label: 'Related Videos',
                   admin: {
-                    description: 'Add optional YouTube links for teaching, music, or sermon context.',
+                    description:
+                      'Add optional YouTube links for teaching, music, or sermon context.',
                   },
                   fields: [
                     {
@@ -310,7 +344,8 @@ export const Lessons: CollectionConfig = {
                   type: 'array',
                   label: 'Other Links',
                   admin: {
-                    description: 'Use for articles, hymns, PDFs, or other supporting material worth opening separately.',
+                    description:
+                      'Use for articles, hymns, PDFs, or other supporting material worth opening separately.',
                   },
                   fields: [
                     {

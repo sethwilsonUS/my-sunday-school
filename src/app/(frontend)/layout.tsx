@@ -57,8 +57,8 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
         <footer className="site-footer">
           <p>{SITE_NAME}</p>
           <p>
-            Published by {SITE_PUBLISHER}. Published lessons are open to everyone. Drafts stay
-            tucked away in the admin.
+            Published in conjunction with{' '}
+            <a href="https://www.stfrancistyler.org">{SITE_PUBLISHER}</a>.
           </p>
         </footer>
       </body>

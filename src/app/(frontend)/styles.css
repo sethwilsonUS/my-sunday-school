@@ -897,15 +897,45 @@ blockquote footer {
   margin-top: 0.55rem;
 }
 
+.musings-list {
+  display: grid;
+  gap: 1rem;
+}
+
 .musings-card {
+  display: grid;
+  gap: 0.85rem;
   border: 1px solid color-mix(in srgb, var(--season-accent, var(--border)) 38%, var(--border));
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--season-accent, var(--surface)) 4%, var(--surface)) 0%,
-      var(--surface) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--season-accent, var(--surface)) 4%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
   padding: 1rem 1.05rem;
+}
+
+.musings-card__header {
+  display: grid;
+  gap: 0.28rem;
+  padding-bottom: 0.78rem;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--season-accent, var(--border)) 28%, var(--border));
+}
+
+.musings-card__header h3,
+.musings-card__header p {
+  margin: 0;
+}
+
+.musings-card__header h3 {
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  line-height: 1.1;
+}
+
+.musings-card__header p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
 }
 
 .markdown-content {

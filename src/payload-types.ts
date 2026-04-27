@@ -247,9 +247,22 @@ export interface Lesson {
       }[]
     | null;
   /**
-   * Public lesson notes in Markdown. Supports headings, lists, emphasis, blockquotes, and links.
+   * Add public reflections in Markdown. Each musing can stand on its own with a title and author.
    */
-  musings?: string | null;
+  musings?:
+    | {
+        title: string;
+        /**
+         * Supports headings, lists, emphasis, blockquotes, and links.
+         */
+        body: string;
+        /**
+         * Plain text for now. This can become an author relationship later.
+         */
+        author: string;
+        id?: string | null;
+      }[]
+    | null;
   /**
    * Optional quotations, excerpts, or prayers that add historical or pastoral texture to the lesson.
    */
@@ -464,7 +477,14 @@ export interface LessonsSelect<T extends boolean = true> {
         question?: T;
         id?: T;
       };
-  musings?: T;
+  musings?:
+    | T
+    | {
+        title?: T;
+        body?: T;
+        author?: T;
+        id?: T;
+      };
   quotes?:
     | T
     | {

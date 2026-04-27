@@ -9,7 +9,8 @@ export const SITE_SUBTITLE = 'Revised Common Lectionary'
 export const SITE_TAGLINE =
   'Scripture, art, study questions, and musings for the Revised Common Lectionary.'
 export const SITE_DESCRIPTION = SITE_TAGLINE
-export const SITE_PUBLISHER = 'St. Francis'
+export const SITE_PUBLISHER =
+  'the Sunday Adult Lectionary Class at St. Francis Episcopal Church in Tyler'
 
 export const OPEN_GRAPH_SIZE = {
   width: 1200,

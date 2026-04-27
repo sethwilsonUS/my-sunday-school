@@ -77,11 +77,16 @@ export default async function LessonPage({ params }: PageProps) {
   const artworks = compact(lesson.artworks)
   const videos = compact(lesson.videoLinks)
   const links = compact(lesson.links)
+  const musings = compact(lesson.musings)
+    .map((musing) => ({
+      ...musing,
+      html: markdownToHTML(musing.body),
+    }))
+    .filter((musing) => Boolean(musing.html))
   const hasAsideResources = videos.length > 0 || links.length > 0
-  const musingsHTML = markdownToHTML(lesson.musings)
   const hasLessonContent =
     Boolean(lesson.collect) ||
-    Boolean(musingsHTML) ||
+    musings.length > 0 ||
     scriptures.length > 0 ||
     questions.length > 0 ||
     quotes.length > 0 ||
@@ -104,7 +109,9 @@ export default async function LessonPage({ params }: PageProps) {
         </Link>
         <div className="lesson-hero__meta">
           <span className="season-badge">{theme.label}</span>
-          <span>{lesson.lectionaryYear ? `Year ${lesson.lectionaryYear}` : 'Lectionary year not set'}</span>
+          <span>
+            {lesson.lectionaryYear ? `Year ${lesson.lectionaryYear}` : 'Lectionary year not set'}
+          </span>
           <time dateTime={lesson.date}>{formatLessonDate(lesson.date)}</time>
         </div>
         <h1>{lesson.title}</h1>
@@ -142,9 +149,7 @@ export default async function LessonPage({ params }: PageProps) {
                     className="scripture-card scripture-accordion"
                   >
                     <summary>
-                      <span className="scripture-accordion__reference">
-                        {scripture.reference}
-                      </span>
+                      <span className="scripture-accordion__reference">{scripture.reference}</span>
                     </summary>
                     <div className="scripture-accordion__content">
                       <p className="muted">{scripture.translation ?? 'NRSV-UE'}</p>
@@ -194,14 +199,22 @@ export default async function LessonPage({ params }: PageProps) {
             </section>
           ) : null}
 
-          {musingsHTML ? (
+          {musings.length > 0 ? (
             <section className="content-section musings-section">
               <h2>Musings</h2>
-              <div className="musings-card season-border">
-                <div
-                  className="markdown-content musings-markdown"
-                  dangerouslySetInnerHTML={{ __html: musingsHTML }}
-                />
+              <div className="musings-list">
+                {musings.map((musing) => (
+                  <article className="musings-card season-border" key={musing.id ?? musing.title}>
+                    <header className="musings-card__header">
+                      <h3>{musing.title}</h3>
+                      <p>By {musing.author}</p>
+                    </header>
+                    <div
+                      className="markdown-content musings-markdown"
+                      dangerouslySetInnerHTML={{ __html: musing.html ?? '' }}
+                    />
+                  </article>
+                ))}
               </div>
             </section>
           ) : null}
