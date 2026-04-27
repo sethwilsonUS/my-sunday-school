@@ -28,9 +28,11 @@ export function ArtworkCard({
   workDate,
 }: ArtworkCardProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const metadata = [artist, medium, workDate].filter(Boolean) as string[]
-  const dialogTitle = (caption ?? alt) || 'Artwork'
+  const imageLabel = alt || 'Artwork'
+  const dialogLabel = `Larger image: ${imageLabel}`
   const imageShellStyle =
     imageWidth && imageHeight
       ? ({ '--artwork-aspect-ratio': `${imageWidth} / ${imageHeight}` } as CSSProperties)
@@ -46,6 +48,7 @@ export function ArtworkCard({
     }
 
     dialogRef.current?.showModal()
+    requestAnimationFrame(() => closeButtonRef.current?.focus())
   }
 
   const handleDialogClick = (event: MouseEvent<HTMLDialogElement>) => {
@@ -59,7 +62,7 @@ export function ArtworkCard({
       <figure className="artwork-card">
         {src ? (
           <button
-            aria-label={`Open full image for ${dialogTitle}`}
+            aria-label={`View larger image: ${imageLabel}`}
             className="artwork-card__trigger"
             onClick={openLightbox}
             type="button"
@@ -85,14 +88,21 @@ export function ArtworkCard({
       </figure>
 
       {src ? (
-        <dialog aria-label={`${dialogTitle} full image`} className="artwork-lightbox" onClick={handleDialogClick} ref={dialogRef}>
+        <dialog
+          aria-label={dialogLabel}
+          className="artwork-lightbox"
+          onClick={handleDialogClick}
+          ref={dialogRef}
+        >
           <div className="artwork-lightbox__frame">
-            <div className="artwork-lightbox__header">
-              <p className="artwork-lightbox__title">{dialogTitle}</p>
-              <button className="artwork-lightbox__close" onClick={closeLightbox} type="button">
-                Close
-              </button>
-            </div>
+            <button
+              className="artwork-lightbox__close"
+              onClick={closeLightbox}
+              ref={closeButtonRef}
+              type="button"
+            >
+              Close
+            </button>
             <div className="artwork-lightbox__image-shell">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img alt={alt} className="artwork-lightbox__image" src={src} />

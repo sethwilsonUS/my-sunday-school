@@ -146,11 +146,16 @@ export interface User {
   collection: 'users';
 }
 /**
+ * Store artwork and supporting media here. Write alt text for what the image shows, then add artist and source details so public credits stay clear.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
 export interface Media {
   id: number;
+  /**
+   * Describe what the image communicates for someone who cannot see it, not just its filename or subject tag.
+   */
   altText: string;
   artist?: string | null;
   artistDates?: string | null;
@@ -159,6 +164,9 @@ export interface Media {
    */
   medium?: string | null;
   workDate?: string | null;
+  /**
+   * Optional source URL for attribution, provenance, or a higher-resolution original.
+   */
   wikimediaUrl?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -173,6 +181,8 @@ export interface Media {
   focalY?: number | null;
 }
 /**
+ * Build weekly lessons here. Scripture, musings, and quotes live in Content; artwork and links live in Media & Links. Only published lessons appear on the public site.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "lessons".
  */
@@ -180,7 +190,7 @@ export interface Lesson {
   id: number;
   title: string;
   /**
-   * Auto-generated from date and title when left blank.
+   * Auto-generated from date and title when left blank. Used in the public lesson URL.
    */
   slug: string;
   date: string;
@@ -194,10 +204,14 @@ export interface Lesson {
     | 'pentecost'
     | 'ordinary-time';
   lectionaryYear?: ('A' | 'B' | 'C') | null;
+  status: 'draft' | 'published';
   /**
    * Paste the collect or prayer appointed for the day as plain text.
    */
   collect?: string | null;
+  /**
+   * Add each appointed reading in order so the public lesson page follows the lectionary flow.
+   */
   scriptures?:
     | {
         reference: string;
@@ -223,6 +237,9 @@ export interface Lesson {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Add open-ended prompts that can carry conversation for a class or discussion group.
+   */
   studyQuestions?:
     | {
         question: string;
@@ -233,6 +250,9 @@ export interface Lesson {
    * Public lesson notes in Markdown. Supports headings, lists, emphasis, blockquotes, and links.
    */
   musings?: string | null;
+  /**
+   * Optional quotations, excerpts, or prayers that add historical or pastoral texture to the lesson.
+   */
   quotes?:
     | {
         text: string;
@@ -245,6 +265,9 @@ export interface Lesson {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Attach featured art for the lesson and add a short caption only when the image needs extra context.
+   */
   artworks?:
     | {
         image: number | Media;
@@ -252,6 +275,9 @@ export interface Lesson {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Add optional YouTube links for teaching, music, or sermon context.
+   */
   videoLinks?:
     | {
         label: string;
@@ -259,6 +285,9 @@ export interface Lesson {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Use for articles, hymns, PDFs, or other supporting material worth opening separately.
+   */
   links?:
     | {
         label: string;
@@ -282,7 +311,6 @@ export interface Lesson {
     };
     [k: string]: unknown;
   } | null;
-  status: 'draft' | 'published';
   updatedAt: string;
   createdAt: string;
 }
@@ -420,6 +448,7 @@ export interface LessonsSelect<T extends boolean = true> {
   date?: T;
   liturgicalSeason?: T;
   lectionaryYear?: T;
+  status?: T;
   collect?: T;
   scriptures?:
     | T
@@ -468,7 +497,6 @@ export interface LessonsSelect<T extends boolean = true> {
         id?: T;
       };
   notes?: T;
-  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -22,6 +22,6 @@ export const migrations = [
   {
     up: migration_20260423_190440_add_musings_and_quote_year.up,
     down: migration_20260423_190440_add_musings_and_quote_year.down,
-    name: '20260423_190440_add_musings_and_quote_year'
+    name: '20260423_190440_add_musings_and_quote_year',
   },
 ];

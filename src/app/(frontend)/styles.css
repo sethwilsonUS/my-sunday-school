@@ -1087,46 +1087,43 @@ blockquote footer {
 }
 
 .artwork-lightbox__frame {
+  position: relative;
   display: grid;
-  gap: 0.9rem;
   width: fit-content;
   max-width: calc(100vw - 1rem);
-  padding: 0.9rem;
-}
-
-.artwork-lightbox__header {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.artwork-lightbox__title {
-  margin: 0;
-  font-size: clamp(1.1rem, 2vw, 1.4rem);
-  font-weight: 800;
-  line-height: 1.05;
+  padding: 0.55rem;
 }
 
 .artwork-lightbox__close {
+  position: absolute;
+  z-index: 1;
+  top: 1rem;
+  right: 1rem;
   min-height: 2.4rem;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   padding: 0.45rem 0.8rem;
   color: var(--foreground);
   font-weight: 800;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.24);
   cursor: pointer;
+  backdrop-filter: blur(12px);
 }
 
 .artwork-lightbox__close:hover {
   background: var(--surface-strong);
 }
 
+.artwork-lightbox__close:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
 .artwork-lightbox__image-shell {
   display: grid;
   width: fit-content;
   max-width: min(calc(100vw - 3rem), 1200px);
-  max-height: calc(100dvh - 12rem);
+  max-height: calc(100dvh - 3rem);
   justify-self: center;
   align-self: center;
   place-items: center;
@@ -1140,7 +1137,7 @@ blockquote footer {
 .artwork-lightbox__image {
   display: block;
   max-width: min(calc(100vw - 5rem), 1200px);
-  max-height: calc(100dvh - 14rem);
+  max-height: calc(100dvh - 5rem);
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1222,13 +1219,6 @@ blockquote footer {
     margin-top: 0.25rem;
   }
 
-  .artwork-lightbox__header {
-    flex-direction: column;
-  }
-
-  .artwork-lightbox__close {
-    align-self: flex-start;
-  }
 }
 
 @media (max-width: 430px) {
@@ -1250,19 +1240,23 @@ blockquote footer {
   }
 
   .artwork-lightbox__frame {
-    gap: 0.7rem;
-    padding: 0.55rem;
+    padding: 0.4rem;
+  }
+
+  .artwork-lightbox__close {
+    top: 0.75rem;
+    right: 0.75rem;
   }
 
   .artwork-lightbox__image-shell {
     max-width: calc(100vw - 1.6rem);
-    max-height: calc(100dvh - 9.5rem);
+    max-height: calc(100dvh - 1.6rem);
     padding: 0.45rem;
   }
 
   .artwork-lightbox__image {
     max-width: calc(100vw - 2.5rem);
-    max-height: calc(100dvh - 10.5rem);
+    max-height: calc(100dvh - 2.5rem);
   }
 }
 

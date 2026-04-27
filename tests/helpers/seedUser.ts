@@ -1,4 +1,6 @@
 import { getPayload } from 'payload'
+
+import './loadEnv'
 import config from '../../src/payload.config.js'
 
 export const testUser = {

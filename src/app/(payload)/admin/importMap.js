@@ -21,6 +21,12 @@ import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93
 import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { LessonsListIntro as LessonsListIntro_7ea0b07c1f0e9c8e8e05f04a25270c83 } from '../../../components/admin/LessonsListIntro'
+import { LessonsPublicLink as LessonsPublicLink_6c997bf6d7d386a999056a1bd896b90a } from '../../../components/admin/LessonsPublicLink'
+import { AdminIcon as AdminIcon_db845eae23ef682757f9df5d4893ae70 } from '../../../components/admin/AdminBrand'
+import { AdminLogo as AdminLogo_db845eae23ef682757f9df5d4893ae70 } from '../../../components/admin/AdminBrand'
+import { DashboardStartHere as DashboardStartHere_d2f017dd7ef101eefbc80af166d52a40 } from '../../../components/admin/DashboardStartHere'
+import { LoginIntro as LoginIntro_7b77c0a8bf5649eadd846d28c5d927eb } from '../../../components/admin/LoginIntro'
 import { VercelBlobClientUploadHandler as VercelBlobClientUploadHandler_16c82c5e25f430251a3e3ba57219ff4e } from '@payloadcms/storage-vercel-blob/client'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -49,6 +55,12 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UnderlineFeatureClient": UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "/components/admin/LessonsListIntro#LessonsListIntro": LessonsListIntro_7ea0b07c1f0e9c8e8e05f04a25270c83,
+  "/components/admin/LessonsPublicLink#LessonsPublicLink": LessonsPublicLink_6c997bf6d7d386a999056a1bd896b90a,
+  "/components/admin/AdminBrand#AdminIcon": AdminIcon_db845eae23ef682757f9df5d4893ae70,
+  "/components/admin/AdminBrand#AdminLogo": AdminLogo_db845eae23ef682757f9df5d4893ae70,
+  "/components/admin/DashboardStartHere#DashboardStartHere": DashboardStartHere_d2f017dd7ef101eefbc80af166d52a40,
+  "/components/admin/LoginIntro#LoginIntro": LoginIntro_7b77c0a8bf5649eadd846d28c5d927eb,
   "@payloadcms/storage-vercel-blob/client#VercelBlobClientUploadHandler": VercelBlobClientUploadHandler_16c82c5e25f430251a3e3ba57219ff4e,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

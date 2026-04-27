@@ -17,6 +17,14 @@ const hasValidBlobToken = blobToken?.startsWith('vercel_blob_rw_') ?? false
 
 export default buildConfig({
   admin: {
+    components: {
+      beforeDashboard: ['/components/admin/DashboardStartHere#DashboardStartHere'],
+      beforeLogin: ['/components/admin/LoginIntro#LoginIntro'],
+      graphics: {
+        Icon: '/components/admin/AdminBrand#AdminIcon',
+        Logo: '/components/admin/AdminBrand#AdminLogo',
+      },
+    },
     user: Users.slug,
     importMap: {
       baseDir: path.resolve(dirname),

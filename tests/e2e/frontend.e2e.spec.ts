@@ -1,5 +1,7 @@
 import { test, expect, Page } from '@playwright/test'
 
+const serverURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
+
 test.describe('Frontend', () => {
   let _page: Page
 
@@ -9,7 +11,7 @@ test.describe('Frontend', () => {
   })
 
   test('can go on homepage', async ({ page }) => {
-    await page.goto('http://localhost:3000')
+    await page.goto(serverURL)
 
     await expect(page).toHaveTitle(/Lectionary Lessons/)
 
