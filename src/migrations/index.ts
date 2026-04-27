@@ -3,6 +3,7 @@ import * as migration_20260423_144114_schema_media_medium_scripture_richtext fro
 import * as migration_20260423_184715_add_collect_to_lessons from './20260423_184715_add_collect_to_lessons';
 import * as migration_20260423_190440_add_musings_and_quote_year from './20260423_190440_add_musings_and_quote_year';
 import * as migration_20260427_071517_musings_as_authored_entries from './20260427_071517_musings_as_authored_entries';
+import * as migration_20260427_142353_add_media_image_sizes from './20260427_142353_add_media_image_sizes';
 
 export const migrations = [
   {
@@ -29,5 +30,10 @@ export const migrations = [
     up: migration_20260427_071517_musings_as_authored_entries.up,
     down: migration_20260427_071517_musings_as_authored_entries.down,
     name: '20260427_071517_musings_as_authored_entries',
+  },
+  {
+    up: migration_20260427_142353_add_media_image_sizes.up,
+    down: migration_20260427_142353_add_media_image_sizes.down,
+    name: '20260427_142353_add_media_image_sizes'
   },
 ];

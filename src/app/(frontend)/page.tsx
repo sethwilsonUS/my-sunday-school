@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 import { LessonCard } from '@/components/LessonCard'
-import { compact, formatLessonDate } from '@/lib/frontend'
+import { compact, formatLessonDate, getMediaImageSource } from '@/lib/frontend'
 import { splitLessonsForHomepage } from '@/lib/homepage-lessons'
 import { getPublishedLessons } from '@/lib/lessons'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
@@ -24,6 +25,7 @@ export default async function HomePage() {
     ? getLiturgicalTheme(featuredLesson.liturgicalSeason)
     : null
   const featuredArtwork = featuredLesson ? getFirstLessonArtwork(featuredLesson) : null
+  const featuredArtworkSource = getMediaImageSource(featuredArtwork, ['card', 'large'])
   const featuredArtworkIsPortrait = Boolean(
     featuredArtwork?.width && featuredArtwork?.height && featuredArtwork.height > featuredArtwork.width,
   )
@@ -64,7 +66,7 @@ export default async function HomePage() {
 
         {featuredLesson ? (
           <article
-            className={`featured-lesson season-border${featuredArtwork?.url ? '' : ' featured-lesson--text-only'}${featuredArtworkIsPortrait ? ' featured-lesson--portrait' : ''}`}
+            className={`featured-lesson season-border${featuredArtworkSource ? '' : ' featured-lesson--text-only'}${featuredArtworkIsPortrait ? ' featured-lesson--portrait' : ''}`}
             style={
               {
                 '--season-accent': featuredTheme?.accent ?? 'var(--link)',
@@ -92,18 +94,21 @@ export default async function HomePage() {
                 {featuredQuestionCount} {featuredQuestionCount === 1 ? 'question' : 'questions'}
               </p>
             </div>
-            {featuredArtwork?.url ? (
+            {featuredArtwork && featuredArtworkSource ? (
               <Link
                 aria-label={`Open featured lesson ${featuredLesson.title}`}
                 className="featured-lesson__media"
                 href={`/lessons/${featuredLesson.slug}`}
               >
                 <span className="featured-lesson__image-shell" style={featuredArtworkStyle}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     alt={featuredArtwork.altText ?? featuredLesson.title}
                     className="featured-lesson__image"
-                    src={featuredArtwork.url}
+                    height={featuredArtworkSource.height ?? featuredArtwork.height ?? 1}
+                    priority
+                    sizes="(max-width: 720px) calc(100vw - 2rem), 32vw"
+                    src={featuredArtworkSource.src}
+                    width={featuredArtworkSource.width ?? featuredArtwork.width ?? 1}
                   />
                 </span>
               </Link>

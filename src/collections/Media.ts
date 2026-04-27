@@ -66,5 +66,24 @@ export const Media: CollectionConfig = {
       },
     },
   ],
-  upload: true,
+  upload: {
+    adminThumbnail: 'thumbnail',
+    imageSizes: [
+      {
+        name: 'thumbnail',
+        width: 480,
+        withoutEnlargement: true,
+      },
+      {
+        name: 'card',
+        width: 960,
+        withoutEnlargement: true,
+      },
+      {
+        name: 'large',
+        width: 1600,
+        withoutEnlargement: true,
+      },
+    ],
+  },
 }

@@ -1,6 +1,7 @@
 'use client'
 
-import { CSSProperties, MouseEvent, useRef } from 'react'
+import { CSSProperties, MouseEvent, useRef, useState } from 'react'
+import Image from 'next/image'
 
 type ArtworkCardProps = {
   alt: string
@@ -8,9 +9,12 @@ type ArtworkCardProps = {
   caption?: string | null
   imageHeight?: number | null
   imageWidth?: number | null
+  lightboxImageHeight?: number | null
+  lightboxImageWidth?: number | null
   medium?: string | null
   sourceLabel?: string
   sourceUrl?: string | null
+  lightboxSrc?: string | null
   src?: string | null
   workDate?: string | null
 }
@@ -21,14 +25,18 @@ export function ArtworkCard({
   caption,
   imageHeight,
   imageWidth,
+  lightboxImageHeight,
+  lightboxImageWidth,
   medium,
   sourceLabel = 'View on Wikimedia Commons',
   sourceUrl,
+  lightboxSrc,
   src,
   workDate,
 }: ArtworkCardProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const [isLightboxImageVisible, setIsLightboxImageVisible] = useState(false)
 
   const metadata = [artist, medium, workDate].filter(Boolean) as string[]
   const imageLabel = alt || 'Artwork'
@@ -40,6 +48,7 @@ export function ArtworkCard({
 
   const closeLightbox = () => {
     dialogRef.current?.close()
+    setIsLightboxImageVisible(false)
   }
 
   const openLightbox = () => {
@@ -47,6 +56,7 @@ export function ArtworkCard({
       return
     }
 
+    setIsLightboxImageVisible(true)
     dialogRef.current?.showModal()
     requestAnimationFrame(() => closeButtonRef.current?.focus())
   }
@@ -68,8 +78,14 @@ export function ArtworkCard({
             type="button"
           >
             <span className="artwork-card__image-shell" style={imageShellStyle}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt={alt} className="artwork-card__image" src={src} />
+              <Image
+                alt={alt}
+                className="artwork-card__image"
+                height={imageHeight ?? 1}
+                sizes="(max-width: 720px) calc(100vw - 2rem), 32vw"
+                src={src}
+                width={imageWidth ?? 1}
+              />
               <span className="artwork-card__zoom-hint">Open full image</span>
             </span>
           </button>
@@ -92,6 +108,7 @@ export function ArtworkCard({
           aria-label={dialogLabel}
           className="artwork-lightbox"
           onClick={handleDialogClick}
+          onClose={() => setIsLightboxImageVisible(false)}
           ref={dialogRef}
         >
           <div className="artwork-lightbox__frame">
@@ -104,8 +121,16 @@ export function ArtworkCard({
               Close
             </button>
             <div className="artwork-lightbox__image-shell">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt={alt} className="artwork-lightbox__image" src={src} />
+              {isLightboxImageVisible ? (
+                <Image
+                  alt={alt}
+                  className="artwork-lightbox__image"
+                  height={lightboxImageHeight ?? imageHeight ?? 1}
+                  sizes="100vw"
+                  src={lightboxSrc ?? src}
+                  width={lightboxImageWidth ?? imageWidth ?? 1}
+                />
+              ) : null}
             </div>
           </div>
         </dialog>

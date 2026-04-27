@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { ArtworkCard } from '@/components/ArtworkCard'
-import { compact, formatLessonDate, getMedia, getMediaUrl } from '@/lib/frontend'
+import { compact, formatLessonDate, getMedia, getMediaImageSource } from '@/lib/frontend'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
 import { markdownToHTML } from '@/lib/markdown'
@@ -224,19 +224,23 @@ export default async function LessonPage({ params }: PageProps) {
           {artworks.length > 0 ? (
             artworks.map((artwork) => {
               const media = getMedia(artwork.image)
-              const mediaUrl = getMediaUrl(artwork.image)
+              const mediaSource = getMediaImageSource(media, ['card', 'large'])
+              const lightboxSource = getMediaImageSource(media, ['large', 'card'])
 
               return (
                 <ArtworkCard
                   alt={media?.altText ?? artwork.caption ?? 'Artwork'}
                   artist={media?.artist}
                   caption={artwork.caption}
-                  imageHeight={media?.height}
-                  imageWidth={media?.width}
+                  imageHeight={mediaSource?.height ?? media?.height}
+                  imageWidth={mediaSource?.width ?? media?.width}
                   key={artwork.id ?? media?.id ?? artwork.caption}
+                  lightboxImageHeight={lightboxSource?.height ?? media?.height}
+                  lightboxImageWidth={lightboxSource?.width ?? media?.width}
+                  lightboxSrc={lightboxSource?.src}
                   medium={media?.medium}
                   sourceUrl={media?.wikimediaUrl}
-                  src={mediaUrl}
+                  src={mediaSource?.src}
                   workDate={media?.workDate}
                 />
               )

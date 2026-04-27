@@ -1,6 +1,6 @@
 import type { Lesson, Media } from '@/payload-types'
 
-import { compact, getMedia } from './frontend'
+import { compact, getMedia, getMediaImageSource } from './frontend'
 import { formatLessonDate } from './frontend'
 import { getLiturgicalTheme } from './liturgical-themes'
 
@@ -81,7 +81,7 @@ export const getFirstLessonArtwork = (lesson: Pick<Lesson, 'artworks'>): Media |
 }
 
 export const getFirstLessonArtworkUrl = (lesson: Pick<Lesson, 'artworks'>) =>
-  toAbsoluteUrl(getFirstLessonArtwork(lesson)?.url)
+  toAbsoluteUrl(getMediaImageSource(getFirstLessonArtwork(lesson), ['large', 'card'])?.src)
 
 export const fetchImageDataUrl = async (imageUrl: string | null | undefined) => {
   const absoluteUrl = toAbsoluteUrl(imageUrl)
