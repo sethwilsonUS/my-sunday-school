@@ -7,7 +7,7 @@ import { SITE_NAME, SITE_SUBTITLE } from '@/lib/share'
 export function SiteHeader() {
   return (
     <header className="site-header">
-      <Link aria-label="Lectionary Lessons home" className="brand" href="/">
+      <Link className="brand" href="/">
         <span aria-hidden="true" className="brand__mark">
           <BrandMark size={28} />
         </span>

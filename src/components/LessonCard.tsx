@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 
-import type { Lesson } from '@/payload-types'
 import { compact, formatShortDate } from '@/lib/frontend'
+import type { LessonSummary } from '@/lib/lessons'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 
 type SeasonStyle = CSSProperties & {
@@ -10,7 +10,7 @@ type SeasonStyle = CSSProperties & {
   '--season-accent-dark': string
 }
 
-export function LessonCard({ lesson }: { lesson: Lesson }) {
+export function LessonCard({ lesson }: { lesson: LessonSummary }) {
   const theme = getLiturgicalTheme(lesson.liturgicalSeason)
   const scriptureCount = compact(lesson.scriptures).length
   const questionCount = compact(lesson.studyQuestions).length

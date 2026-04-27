@@ -57,8 +57,9 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
         <footer className="site-footer">
           <p>{SITE_NAME}</p>
           <p>
-            Published in conjunction with{' '}
-            <a href="https://www.stfrancistyler.org">{SITE_PUBLISHER}</a>.
+            <a href="https://www.stfrancistyler.org" rel="noopener noreferrer" target="_blank">
+              Published in conjunction with {SITE_PUBLISHER}.
+            </a>
           </p>
         </footer>
       </body>
