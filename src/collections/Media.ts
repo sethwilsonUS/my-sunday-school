@@ -2,6 +2,20 @@ import type { CollectionConfig } from 'payload'
 
 import { isAdmin } from '../access'
 
+const generateMediaSizeFilename = ({
+  extension,
+  height,
+  originalName,
+  sizeName,
+  width,
+}: {
+  extension: string
+  height: number
+  originalName: string
+  sizeName: string
+  width: number
+}) => `${originalName}-${sizeName}-${width}x${height}.${extension}`
+
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
@@ -71,17 +85,20 @@ export const Media: CollectionConfig = {
     imageSizes: [
       {
         name: 'thumbnail',
-        width: 480,
+        generateImageName: generateMediaSizeFilename,
+        width: 240,
         withoutEnlargement: true,
       },
       {
         name: 'card',
-        width: 960,
+        generateImageName: generateMediaSizeFilename,
+        width: 640,
         withoutEnlargement: true,
       },
       {
         name: 'large',
-        width: 1600,
+        generateImageName: generateMediaSizeFilename,
+        width: 1280,
         withoutEnlargement: true,
       },
     ],

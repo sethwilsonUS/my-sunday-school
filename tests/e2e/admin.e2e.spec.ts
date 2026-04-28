@@ -6,7 +6,7 @@ import { cleanupTestLesson, seedTestLesson, testLesson } from '../helpers/seedLe
 const serverURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
 
 test.describe('Admin Panel', () => {
-  let lessonID: number | string
+  let lessonID: number
 
   test.beforeAll(async () => {
     await seedTestUser()

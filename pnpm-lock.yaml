@@ -14,18 +14,21 @@ importers:
       '@payloadcms/next':
         specifier: 3.84.0
         version: 3.84.0(@types/react@19.2.14)(graphql@16.13.2)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)
+      '@payloadcms/plugin-cloud-storage':
+        specifier: 3.84.0
+        version: 3.84.0(@types/react@19.2.14)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)
       '@payloadcms/richtext-lexical':
         specifier: 3.84.0
         version: 3.84.0(@faceless-ui/modal@3.0.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@faceless-ui/scroll-info@2.0.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@payloadcms/next@3.84.0(@types/react@19.2.14)(graphql@16.13.2)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3))(@types/react@19.2.14)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)(yjs@13.6.30)
-      '@payloadcms/storage-vercel-blob':
-        specifier: 3.84.0
-        version: 3.84.0(@types/react@19.2.14)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)
       '@payloadcms/ui':
         specifier: 3.84.0
         version: 3.84.0(@types/react@19.2.14)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)
       '@tailwindcss/postcss':
         specifier: 4.2.4
         version: 4.2.4
+      '@vercel/blob':
+        specifier: 2.3.1
+        version: 2.3.1
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
@@ -1367,12 +1370,6 @@ packages:
       payload: 3.84.0
       react: ^19.0.1 || ^19.1.2 || ^19.2.1
       react-dom: ^19.0.1 || ^19.1.2 || ^19.2.1
-
-  '@payloadcms/storage-vercel-blob@3.84.0':
-    resolution: {integrity: sha512-5xsjyCBnN6LRxAu5qDr88Uwc3+rTfsqXdTjRMv6pb7InjaqcZXXI+Hxm86ucttUnH6UTsnpE95pdJoHBujVNYA==}
-    engines: {node: ^18.20.2 || >=20.9.0}
-    peerDependencies:
-      payload: 3.84.0
 
   '@payloadcms/translations@3.84.0':
     resolution: {integrity: sha512-t96jnR9vNFhZLh0JJQzDaIh7AXZMC/E715y6S8sjlGLHA0HQ1ZoTGGfI5Np5ndVm6kRDplwUeLZlHv0ZVeahiw==}
@@ -5659,20 +5656,6 @@ snapshots:
       - typescript
       - utf-8-validate
       - yjs
-
-  '@payloadcms/storage-vercel-blob@3.84.0(@types/react@19.2.14)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)':
-    dependencies:
-      '@payloadcms/plugin-cloud-storage': 3.84.0(@types/react@19.2.14)(monaco-editor@0.55.1)(next@15.4.11(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.77.4))(payload@3.84.0(graphql@16.13.2)(typescript@5.7.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.7.3)
-      '@vercel/blob': 2.3.1
-      payload: 3.84.0(graphql@16.13.2)(typescript@5.7.3)
-    transitivePeerDependencies:
-      - '@types/react'
-      - monaco-editor
-      - next
-      - react
-      - react-dom
-      - supports-color
-      - typescript
 
   '@payloadcms/translations@3.84.0':
     dependencies:

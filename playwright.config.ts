@@ -11,7 +11,7 @@ dotenv.config({ path: '.env.local' })
 dotenv.config()
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
-const webServerCommand = process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? 'pnpm dev'
+const webServerCommand = process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? 'pnpm devsafe'
 
 /**
  * See https://playwright.dev/docs/test-configuration.

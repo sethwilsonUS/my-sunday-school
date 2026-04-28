@@ -1,67 +1,65 @@
-# Payload Blank Template
+# Lectionary Lessons
 
-This template comes configured with the bare minimum to get started on anything you need.
+Payload CMS and Next.js site for publishing weekly lectionary lessons with curated artwork.
 
-## Quick start
+## Local Development
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+1. Copy local environment values into `.env.local`.
+2. Install dependencies with `pnpm install`.
+3. Start one dev server with `pnpm dev`.
+4. Open `http://localhost:3000`.
 
-## Quick Start - local setup
+This project currently uses the same database for local development and production. Treat local admin writes, seed scripts, and one-off maintenance scripts as live data operations.
 
-To spin up this template locally, follow these steps:
+## Admin Dev Server Recovery
 
-### Clone
+Payload admin import maps and Next.js Server Action IDs can get stale after changing admin components, upload providers, or Payload config. If the admin shows a blank field, missing Payload component, missing `_not-found/page.js`, or a "Server Action was not found" error:
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+1. Stop every running dev server for this repo.
+2. Run `rm -rf .next`.
+3. Run `pnpm generate:importmap` if Payload admin components or providers changed.
+4. Start exactly one server with `pnpm dev`.
+5. Hard refresh the admin page in the browser.
 
-### Development
+`pnpm devsafe` combines the `.next` cleanup with `next dev`, but still make sure only one dev server is running.
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+## Media Uploads
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+Media uploads use Vercel Blob through a custom Payload upload path:
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+- Browser uploads get a random filename suffix before they reach Blob, which avoids "Blob already exists" collisions.
+- Payload-generated image sizes are uploaded server-side with overwrite enabled, so a retry can finish after a partial failure.
+- Public rendering uses generated sizes when available and falls back to the original image URL when old media has not been backfilled.
 
-#### Docker (Optional)
+OpenGraph images use the first artwork attached to a lesson. The helper prefers `large`, then `card`, then the original media URL.
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+## Media Size Backfill
 
-To do so, follow these steps:
+Backfill is intentionally separate from deploy. The script defaults to dry-run mode and only reports media records whose generated sizes are missing or stale:
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+```bash
+pnpm media:backfill-sizes
+pnpm media:backfill-sizes -- --ids 72
+```
 
-## How it works
+Write mode requires explicit shared-database confirmation and a bounded target:
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+```bash
+pnpm media:backfill-sizes -- --write --confirm-shared-db --ids 72
+pnpm media:backfill-sizes -- --write --confirm-shared-db --limit 5 --start-after 20
+```
 
-### Collections
+The script uploads new derivative files and updates only `sizes` metadata. It does not delete originals or old Blob files. Run one canary record first, inspect the admin preview, public lesson page, and OpenGraph image, then continue in small batches.
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+When an old media record stores a relative original URL, the script resolves it against `MEDIA_BACKFILL_ORIGIN` when set, then falls back to the configured site/Vercel/local origin and the direct Vercel Blob URL.
 
-- #### Users (Authentication)
+## Validation
 
-  Users are auth-enabled collections that have access to the admin panel.
+```bash
+pnpm run lint
+pnpm run build
+pnpm run test:int
+pnpm run test:e2e
+```
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+Stop the dev server before `pnpm run build` so Next.js does not read a stale `.next` tree while another process is writing to it.

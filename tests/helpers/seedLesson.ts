@@ -36,6 +36,29 @@ export async function seedTestLesson() {
   })
 }
 
+export async function attachArtworkToTestLesson({
+  lessonID,
+  mediaID,
+}: {
+  lessonID: number
+  mediaID: number
+}) {
+  const payload = await getPayload({ config })
+
+  return payload.update({
+    collection: 'lessons',
+    data: {
+      artworks: [
+        {
+          image: mediaID,
+        },
+      ],
+    },
+    depth: 0,
+    id: lessonID,
+  })
+}
+
 export async function cleanupTestLesson(): Promise<void> {
   await deleteLessonBySlug(testLesson.slug)
 }
