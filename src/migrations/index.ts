@@ -4,6 +4,7 @@ import * as migration_20260423_184715_add_collect_to_lessons from './20260423_18
 import * as migration_20260423_190440_add_musings_and_quote_year from './20260423_190440_add_musings_and_quote_year';
 import * as migration_20260427_071517_musings_as_authored_entries from './20260427_071517_musings_as_authored_entries';
 import * as migration_20260427_142353_add_media_image_sizes from './20260427_142353_add_media_image_sizes';
+import * as migration_20260507_000900_add_source_lectionary_url from './20260507_000900_add_source_lectionary_url';
 
 export const migrations = [
   {
@@ -34,6 +35,11 @@ export const migrations = [
   {
     up: migration_20260427_142353_add_media_image_sizes.up,
     down: migration_20260427_142353_add_media_image_sizes.down,
-    name: '20260427_142353_add_media_image_sizes'
+    name: '20260427_142353_add_media_image_sizes',
+  },
+  {
+    up: migration_20260507_000900_add_source_lectionary_url.up,
+    down: migration_20260507_000900_add_source_lectionary_url.down,
+    name: '20260507_000900_add_source_lectionary_url'
   },
 ];
