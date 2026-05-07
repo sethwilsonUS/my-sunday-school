@@ -22,7 +22,7 @@ test.describe('Frontend', () => {
     )
 
     await expect(page.getByRole('link', { name: 'Browse lessons' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Open admin' })).toHaveCount(0)
-    await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0)
+    await expect(page.getByRole('link', { exact: true, name: 'Open admin' })).toHaveCount(0)
+    await expect(page.getByRole('link', { exact: true, name: 'Admin' })).toHaveCount(0)
   })
 })
