@@ -59,6 +59,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
           <p>
             <a href="https://www.stfrancistyler.org" rel="noopener noreferrer" target="_blank">
               Published in conjunction with {SITE_PUBLISHER}.
+              <span className="sr-only"> Opens in a new tab.</span>
             </a>
           </p>
         </footer>

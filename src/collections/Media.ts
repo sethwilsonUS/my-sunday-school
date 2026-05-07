@@ -37,7 +37,7 @@ export const Media: CollectionConfig = {
       required: true,
       admin: {
         description:
-          'Describe what the image communicates for someone who cannot see it, not just its filename or subject tag.',
+          'Describe the visual information a reader needs if they cannot see the image. Avoid filenames or subject tags by themselves.',
         placeholder: 'Christ seated on the shore, offering bread to the disciples at dawn.',
       },
     },
@@ -75,7 +75,8 @@ export const Media: CollectionConfig = {
       type: 'text',
       label: 'Wikimedia Commons URL',
       admin: {
-        description: 'Optional source URL for attribution, provenance, or a higher-resolution original.',
+        description:
+          'Optional source URL for attribution, provenance, or a higher-resolution original.',
         placeholder: 'https://commons.wikimedia.org/wiki/File:...',
       },
     },

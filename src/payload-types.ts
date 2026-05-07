@@ -154,7 +154,7 @@ export interface User {
 export interface Media {
   id: number;
   /**
-   * Describe what the image communicates for someone who cannot see it, not just its filename or subject tag.
+   * Describe the visual information a reader needs if they cannot see the image. Avoid filenames or subject tags by themselves.
    */
   altText: string;
   artist?: string | null;
@@ -283,7 +283,7 @@ export interface Lesson {
     | {
         title: string;
         /**
-         * Supports headings, lists, emphasis, blockquotes, and links.
+         * Supports headings, lists, emphasis, blockquotes, and links. Headings are nested under the musing title on public pages.
          */
         body: string;
         /**

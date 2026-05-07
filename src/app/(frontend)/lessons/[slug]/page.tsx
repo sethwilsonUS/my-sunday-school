@@ -80,7 +80,7 @@ export default async function LessonPage({ params }: PageProps) {
   const musings = compact(lesson.musings)
     .map((musing) => ({
       ...musing,
-      html: markdownToHTML(musing.body),
+      html: markdownToHTML(musing.body, { headingBaseLevel: 4 }),
     }))
     .filter((musing) => Boolean(musing.html))
   const hasAsideResources = videos.length > 0 || links.length > 0
@@ -220,7 +220,7 @@ export default async function LessonPage({ params }: PageProps) {
           ) : null}
         </div>
 
-        <aside aria-label="Lesson artwork" className="lesson-aside">
+        <aside aria-label="Lesson media and resources" className="lesson-aside">
           {artworks.length > 0 ? (
             artworks.map((artwork) => {
               const media = getMedia(artwork.image)

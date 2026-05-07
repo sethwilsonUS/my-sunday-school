@@ -42,11 +42,21 @@ const renderInlineMarkdown = (value: string) => {
   return html
 }
 
-export const markdownToHTML = (value: string | null | undefined) => {
+type MarkdownToHTMLOptions = {
+  headingBaseLevel?: number
+}
+
+const clampHeadingLevel = (level: number) => Math.min(Math.max(level, 1), 6)
+
+export const markdownToHTML = (
+  value: string | null | undefined,
+  options: MarkdownToHTMLOptions = {},
+) => {
   if (!value?.trim()) {
     return null
   }
 
+  const headingBaseLevel = clampHeadingLevel(options.headingBaseLevel ?? 1)
   const lines = value.replace(/\r\n?/g, '\n').split('\n')
   const html: string[] = []
   let paragraph: string[] = []
@@ -96,7 +106,7 @@ export const markdownToHTML = (value: string | null | undefined) => {
       flushParagraph()
       flushBlockquote()
       flushList()
-      const level = headingMatch[1].length
+      const level = clampHeadingLevel(headingBaseLevel + headingMatch[1].length - 1)
       html.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`)
       continue
     }
