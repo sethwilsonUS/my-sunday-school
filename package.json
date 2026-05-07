@@ -17,7 +17,11 @@
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int && pnpm run test:e2e",
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
-    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
+    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
+    "lesson:create-draft": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/create-lesson-draft.ts",
+    "lesson:attach-art": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/attach-lesson-art.ts",
+    "lesson:preflight": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/lesson-preflight.ts",
+    "lesson:sync": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/lesson-sync.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.0",

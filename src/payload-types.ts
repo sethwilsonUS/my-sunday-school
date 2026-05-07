@@ -219,6 +219,10 @@ export interface Lesson {
    * Auto-generated from date and title when left blank. Used in the public lesson URL.
    */
   slug: string;
+  /**
+   * Normalized lectionary URL used by Garden Mission Control to sync the same lesson idempotently.
+   */
+  sourceLectionaryUrl?: string | null;
   date: string;
   liturgicalSeason:
     | 'advent'
@@ -518,6 +522,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface LessonsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
+  sourceLectionaryUrl?: T;
   date?: T;
   liturgicalSeason?: T;
   lectionaryYear?: T;

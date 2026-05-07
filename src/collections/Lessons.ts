@@ -69,6 +69,16 @@ export const Lessons: CollectionConfig = {
               },
             },
             {
+              name: 'sourceLectionaryUrl',
+              type: 'text',
+              index: true,
+              label: 'Source Lectionary URL',
+              admin: {
+                description:
+                  'Normalized lectionary URL used by Garden Mission Control to sync the same lesson idempotently.',
+              },
+            },
+            {
               type: 'row',
               fields: [
                 {

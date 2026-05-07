@@ -10,6 +10,9 @@
 - This is a Payload CMS v3 + Next.js app using `pnpm`.
 - Keep the public site draft-safe: public frontend reads should only expose published lessons.
 - Do not add real secrets to committed files. Keep `.env.local` local and update `.env.example` only with placeholder values.
+- For future Payload client-project scaffolds, consult `docs/payload-project-playbook.md`.
+  This repo intentionally keeps local/prod DB convenience, but the playbook defaults
+  client work to separated production, staging, local, and test data lanes.
 
 ## Style
 - Keep the frontend in the editorial lectionary direction already established: readable, refined, calm, and accessible.
