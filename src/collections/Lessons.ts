@@ -209,7 +209,8 @@ export const Lessons: CollectionConfig = {
                   required: true,
                   label: 'Body (Markdown)',
                   admin: {
-                    description: 'Supports headings, lists, emphasis, blockquotes, and links.',
+                    description:
+                      'Supports headings, lists, emphasis, blockquotes, and links. Headings are nested under the musing title on public pages.',
                     placeholder:
                       'Write a few reflections, questions, or teaching notes here in Markdown.',
                   },

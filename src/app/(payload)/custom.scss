@@ -4,8 +4,8 @@
     --admin-paper: #fbfaf7;
     --admin-paper-strong: #f1eee7;
     --admin-paper-soft: #f7f4ed;
-    --admin-border: #d7d0c4;
-    --admin-border-strong: #b8ad9b;
+    --admin-border: #9a9081;
+    --admin-border-strong: #766d60;
     --admin-muted: #5f625d;
     --admin-accent: #1d5f7a;
     --admin-link: #8b1a1a;
@@ -51,8 +51,8 @@
     --admin-paper: #11110f;
     --admin-paper-strong: #1c1b18;
     --admin-paper-soft: #171613;
-    --admin-border: #4a4438;
-    --admin-border-strong: #6a6255;
+    --admin-border: #71695b;
+    --admin-border-strong: #928775;
     --admin-muted: #beb7aa;
     --admin-accent: #f0d57a;
     --admin-link: #f0d57a;
@@ -98,8 +98,7 @@
   body {
     background:
       linear-gradient(90deg, rgb(139 26 26 / 0.05) 0 1px, transparent 1px 100%),
-      linear-gradient(180deg, rgb(31 111 80 / 0.05) 0 1px, transparent 1px 100%),
-      var(--theme-bg);
+      linear-gradient(180deg, rgb(31 111 80 / 0.05) 0 1px, transparent 1px 100%), var(--theme-bg);
     background-size: 72px 72px;
     color: var(--theme-text);
   }
@@ -113,6 +112,11 @@
       linear-gradient(135deg, transparent 0 55%, rgb(31 111 80 / 0.06) 55% 55.4%, transparent 55.4%);
     content: '';
     pointer-events: none;
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: var(--accessibility-outline);
+    outline-offset: var(--accessibility-outline-offset);
   }
 
   .template-default,
@@ -150,7 +154,7 @@
 
   .app-header__content,
   .doc-controls__wrapper {
-    border-bottom: 1px solid var(--theme-elevation-150);
+    border-bottom: 1px solid var(--admin-border);
   }
 
   .nav__wrap,
@@ -159,12 +163,12 @@
   }
 
   .nav__wrap {
-    border-right: 1px solid var(--theme-elevation-150);
+    border-right: 1px solid var(--admin-border);
     padding-top: calc(var(--base) * 0.5);
   }
 
   html[dir='rtl'] .nav__wrap {
-    border-left: 1px solid var(--theme-elevation-150);
+    border-left: 1px solid var(--admin-border);
     border-right: 0;
   }
 
@@ -181,10 +185,6 @@
   .nav__link {
     border-radius: 999px;
     padding: calc(var(--base) * 0.35) calc(var(--base) * 0.6);
-    transition:
-      background-color 120ms ease,
-      color 120ms ease,
-      box-shadow 120ms ease;
   }
 
   .nav__link:hover,
@@ -213,18 +213,18 @@
   .card,
   .auth-fields,
   .collection-edit__auth {
-    border: 1px solid var(--theme-elevation-150);
+    border: 1px solid var(--admin-border);
     background: color-mix(in srgb, var(--theme-elevation-0) 94%, var(--theme-elevation-50));
     box-shadow: 0 12px 35px rgb(23 20 15 / 0.06);
   }
 
   .document-fields__sidebar-wrap {
-    border-left: 1px solid var(--theme-elevation-100);
+    border-left: 1px solid var(--admin-border);
   }
 
   html[dir='rtl'] .document-fields__sidebar-wrap {
     border-left: 0;
-    border-right: 1px solid var(--theme-elevation-100);
+    border-right: 1px solid var(--admin-border);
   }
 
   .document-fields__sidebar {
@@ -238,7 +238,7 @@
   .tabs-field__tabs-wrap {
     margin-bottom: calc(var(--base) * 0.9);
     padding: calc(var(--base) * 0.25);
-    border: 1px solid var(--theme-elevation-150);
+    border: 1px solid var(--admin-border);
     border-radius: 999px;
     background: color-mix(in srgb, var(--theme-elevation-50) 92%, transparent);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
@@ -259,25 +259,18 @@
     font-weight: 700;
     line-height: 1;
     opacity: 1;
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease,
-      box-shadow 120ms ease,
-      transform 120ms ease;
   }
 
   .tabs-field__tab-button:hover {
     background: color-mix(in srgb, var(--theme-elevation-100) 82%, transparent);
-    border-color: color-mix(in srgb, var(--theme-elevation-250) 88%, transparent);
+    border-color: var(--admin-border);
     color: var(--theme-text);
-    transform: translateY(-1px);
   }
 
   .tabs-field__tab-button--active {
     color: var(--theme-text);
     background: color-mix(in srgb, var(--theme-elevation-0) 96%, transparent);
-    border-color: color-mix(in srgb, var(--theme-elevation-250) 88%, transparent);
+    border-color: var(--admin-border);
     box-shadow:
       0 8px 20px rgb(23 20 15 / 0.08),
       inset 0 -2px 0 var(--admin-link);
@@ -289,8 +282,8 @@
 
   .render-fields > .collapsible-field,
   .render-fields > .group-field {
-    border-top-color: var(--theme-elevation-150);
-    border-bottom-color: var(--theme-elevation-150);
+    border-top-color: var(--admin-border);
+    border-bottom-color: var(--admin-border);
   }
 
   .admin-branding__logo {
@@ -304,7 +297,7 @@
   .admin-branding__nav-icon {
     display: grid;
     place-items: center;
-    border: 1px solid var(--theme-elevation-150);
+    border: 1px solid var(--admin-border);
     background: color-mix(in srgb, var(--theme-elevation-0) 90%, transparent);
     color: var(--theme-text);
   }
@@ -342,10 +335,14 @@
     gap: calc(var(--base) * 0.8);
     margin-bottom: calc(var(--base) * 1.1);
     padding: calc(var(--base) * 1.1);
-    border: 1px solid var(--theme-elevation-150);
+    border: 1px solid var(--admin-border);
     border-radius: 22px;
     background:
-      linear-gradient(135deg, color-mix(in srgb, var(--theme-elevation-0) 96%, transparent), transparent),
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--theme-elevation-0) 96%, transparent),
+        transparent
+      ),
       color-mix(in srgb, var(--theme-elevation-50) 92%, transparent);
     box-shadow: 0 14px 44px rgb(23 20 15 / 0.08);
   }
@@ -416,6 +413,26 @@
   a {
     text-underline-offset: 0.16em;
     text-decoration-thickness: 0.08em;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .nav__link,
+    .tabs-field__tab-button {
+      transition-duration: 120ms;
+      transition-timing-function: ease;
+    }
+
+    .nav__link {
+      transition-property: background-color, color, box-shadow;
+    }
+
+    .tabs-field__tab-button {
+      transition-property: background-color, border-color, color, box-shadow, transform;
+    }
+
+    .tabs-field__tab-button:hover {
+      transform: translateY(-1px);
+    }
   }
 
   @media (max-width: 1024px) {

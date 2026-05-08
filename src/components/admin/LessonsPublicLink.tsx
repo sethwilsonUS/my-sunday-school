@@ -7,9 +7,18 @@ type LessonsPublicLinkProps = {
   payload: Payload
 }
 
+// This server-rendered status is available on load; dynamic save announcements need client UI.
+function PublicLinkStatus({ children }: { children: string }) {
+  return (
+    <p className="admin-branding__inline-note" role="status">
+      {children}
+    </p>
+  )
+}
+
 export async function LessonsPublicLink({ id, payload }: LessonsPublicLinkProps) {
   if (!id) {
-    return <p className="admin-branding__inline-note">Save this lesson to get a public link.</p>
+    return <PublicLinkStatus>Save this lesson to get a public link.</PublicLinkStatus>
   }
 
   try {
@@ -20,28 +29,33 @@ export async function LessonsPublicLink({ id, payload }: LessonsPublicLinkProps)
     })
 
     if (!lesson.slug) {
-      return <p className="admin-branding__inline-note">Save this lesson to get a public link.</p>
+      return <PublicLinkStatus>Save this lesson to get a public link.</PublicLinkStatus>
     }
 
     if (lesson.status !== 'published') {
       return (
-        <p className="admin-branding__inline-note">
-          Set this lesson to Published to open the public page.
-        </p>
+        <PublicLinkStatus>Set this lesson to Published to open the public page.</PublicLinkStatus>
       )
     }
 
     return (
       <a
+        aria-label="View public lesson (opens in a new tab)"
         className="btn btn--style-secondary admin-branding__public-link"
         href={getCanonicalUrl(getLessonPath(lesson.slug))}
-        rel="noreferrer"
+        rel="noopener noreferrer"
         target="_blank"
       >
         View public lesson
       </a>
     )
-  } catch {
-    return <p className="admin-branding__inline-note">Save this lesson to get a public link.</p>
+  } catch (error) {
+    console.error('Unable to load lesson public link', error)
+
+    return (
+      <PublicLinkStatus>
+        We could not load the public link right now. Try refreshing.
+      </PublicLinkStatus>
+    )
   }
 }

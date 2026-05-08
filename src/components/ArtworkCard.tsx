@@ -1,6 +1,7 @@
 'use client'
 
-import { CSSProperties, MouseEvent, useRef, useState } from 'react'
+import type { CSSProperties, MouseEvent } from 'react'
+import { useId, useRef, useState } from 'react'
 import Image from 'next/image'
 
 type ArtworkCardProps = {
@@ -36,6 +37,9 @@ export function ArtworkCard({
 }: ArtworkCardProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dialogTitleId = useId()
+  const dialogDescriptionId = useId()
   const [isLightboxImageVisible, setIsLightboxImageVisible] = useState(false)
 
   const metadata = [artist, medium, workDate].filter(Boolean) as string[]
@@ -47,17 +51,21 @@ export function ArtworkCard({
       : undefined
 
   const closeLightbox = () => {
-    dialogRef.current?.close()
+    if (dialogRef.current?.open) {
+      dialogRef.current.close()
+      return
+    }
+
     setIsLightboxImageVisible(false)
   }
 
   const openLightbox = () => {
-    if (!src) {
+    if (!src || !dialogRef.current) {
       return
     }
 
     setIsLightboxImageVisible(true)
-    dialogRef.current?.showModal()
+    dialogRef.current.showModal()
     requestAnimationFrame(() => closeButtonRef.current?.focus())
   }
 
@@ -65,6 +73,11 @@ export function ArtworkCard({
     if (event.target === dialogRef.current) {
       closeLightbox()
     }
+  }
+
+  const handleDialogClose = () => {
+    setIsLightboxImageVisible(false)
+    requestAnimationFrame(() => triggerRef.current?.focus())
   }
 
   return (
@@ -75,6 +88,7 @@ export function ArtworkCard({
             aria-label={`View larger image: ${imageLabel}`}
             className="artwork-card__trigger"
             onClick={openLightbox}
+            ref={triggerRef}
             type="button"
           >
             <span className="artwork-card__image-shell" style={imageShellStyle}>
@@ -96,8 +110,14 @@ export function ArtworkCard({
             <span key={`${item}-${index}`}>{item}</span>
           ))}
           {sourceUrl ? (
-            <a className="artwork-card__source" href={sourceUrl} rel="noopener noreferrer" target="_blank">
+            <a
+              className="artwork-card__source"
+              href={sourceUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
               {sourceLabel}
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           ) : null}
         </figcaption>
@@ -105,14 +125,23 @@ export function ArtworkCard({
 
       {src ? (
         <dialog
-          aria-label={dialogLabel}
+          aria-describedby={dialogDescriptionId}
+          aria-labelledby={dialogTitleId}
+          aria-modal="true"
           className="artwork-lightbox"
           onClick={handleDialogClick}
-          onClose={() => setIsLightboxImageVisible(false)}
+          onClose={handleDialogClose}
           ref={dialogRef}
         >
           <div className="artwork-lightbox__frame">
+            <h2 className="sr-only" id={dialogTitleId}>
+              {dialogLabel}
+            </h2>
+            <p className="sr-only" id={dialogDescriptionId}>
+              Press Escape or use the close button to return to the lesson.
+            </p>
             <button
+              aria-label="Close image viewer"
               className="artwork-lightbox__close"
               onClick={closeLightbox}
               ref={closeButtonRef}

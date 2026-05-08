@@ -23,7 +23,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      aria-label={`Switch to ${nextTheme} theme`}
+      aria-label="Dark theme"
       aria-pressed={theme === 'dark'}
       className="theme-toggle"
       onClick={() => {
