@@ -49,7 +49,13 @@ export async function LessonsPublicLink({ id, payload }: LessonsPublicLinkProps)
         View public lesson
       </a>
     )
-  } catch {
-    return <PublicLinkStatus>Save this lesson to get a public link.</PublicLinkStatus>
+  } catch (error) {
+    console.error('Unable to load lesson public link', error)
+
+    return (
+      <PublicLinkStatus>
+        We could not load the public link right now. Try refreshing.
+      </PublicLinkStatus>
+    )
   }
 }

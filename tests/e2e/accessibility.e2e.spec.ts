@@ -8,15 +8,36 @@ import '../helpers/loadEnv'
 import config from '../../src/payload.config.js'
 
 const serverURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
+const runId = `${process.pid}-${Date.now()}`
+
+const isLocalServerURL = (value: string) => {
+  try {
+    const { hostname } = new URL(value)
+
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
+  } catch {
+    return false
+  }
+}
+
+const assertSafeMutationTarget = () => {
+  if (isLocalServerURL(serverURL) || process.env.PLAYWRIGHT_ALLOW_DB_MUTATION === 'true') {
+    return
+  }
+
+  throw new Error(
+    `Refusing to seed accessibility audit data against ${serverURL}. Set PLAYWRIGHT_ALLOW_DB_MUTATION=true to override.`,
+  )
+}
 
 const auditUser = {
-  email: 'accessibility-audit@payloadcms.com',
+  email: `accessibility-audit+${runId}@payloadcms.com`,
   password: 'test',
 }
 
 const auditMedia = {
   altText: 'Small test image used for artwork lightbox accessibility checks',
-  filename: '__e2e-accessibility-audit-artwork.png',
+  filename: `__e2e-accessibility-audit-artwork-${runId}.png`,
   mimeType: 'image/png',
 } as const
 
@@ -32,7 +53,7 @@ const auditLesson = {
       title: 'Breakfast by the water',
     },
   ],
-  slug: '2026-04-23-accessibility-audit-test',
+  slug: `2026-04-23-accessibility-audit-test-${runId}`,
   status: 'published',
   studyQuestions: [
     {
@@ -204,6 +225,7 @@ const seedAuditData = async () => {
 test.describe('Accessibility UX', () => {
   test.beforeAll(async () => {
     test.setTimeout(90_000)
+    assertSafeMutationTarget()
     await seedAuditData()
   })
 

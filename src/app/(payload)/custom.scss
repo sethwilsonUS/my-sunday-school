@@ -168,7 +168,7 @@
   }
 
   html[dir='rtl'] .nav__wrap {
-    border-left: 1px solid var(--theme-elevation-150);
+    border-left: 1px solid var(--admin-border);
     border-right: 0;
   }
 
@@ -224,7 +224,7 @@
 
   html[dir='rtl'] .document-fields__sidebar-wrap {
     border-left: 0;
-    border-right: 1px solid var(--theme-elevation-100);
+    border-right: 1px solid var(--admin-border);
   }
 
   .document-fields__sidebar {
