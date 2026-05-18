@@ -81,4 +81,10 @@ describe('lesson Open Graph image URLs', () => {
 
     expect(url.pathname).toBe('/lessons/pentecost/opengraph-image/manual-refresh.png')
   })
+
+  it('encodes non-date version tokens as a single path segment', () => {
+    const url = getLessonOpenGraphUrl('pentecost', 'manual/refresh')
+
+    expect(url).toContain('/lessons/pentecost/opengraph-image/manual%2Frefresh.png')
+  })
 })

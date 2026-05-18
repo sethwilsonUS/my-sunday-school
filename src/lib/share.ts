@@ -78,7 +78,9 @@ export const getLessonOpenGraphPath = (slug: string, version?: string | null) =>
     return basePath
   }
 
-  return `${getLessonPath(slug)}/opengraph-image/${getOpenGraphVersionToken(version)}.png`
+  const encodedVersion = encodeURIComponent(getOpenGraphVersionToken(version))
+
+  return `${getLessonPath(slug)}/opengraph-image/${encodedVersion}.png`
 }
 
 export const getLessonOpenGraphUrl = (slug: string, version?: string | null) => {
