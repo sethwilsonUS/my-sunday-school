@@ -49,12 +49,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const metadataTitle = `${lesson.title} | ${lessonMetaLabel}`
   const socialImageUrl = getLessonOpenGraphUrl(slug, lesson.updatedAt)
   const socialImage = {
-    alt: LESSON_SOCIAL_IMAGE_ALT,
-    height: OPEN_GRAPH_SIZE.height,
-    secureUrl: socialImageUrl,
-    type: OPEN_GRAPH_CONTENT_TYPE,
     url: socialImageUrl,
     width: OPEN_GRAPH_SIZE.width,
+    height: OPEN_GRAPH_SIZE.height,
+    alt: LESSON_SOCIAL_IMAGE_ALT,
+    type: OPEN_GRAPH_CONTENT_TYPE,
   }
 
   return {

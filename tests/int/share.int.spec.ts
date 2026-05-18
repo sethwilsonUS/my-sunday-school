@@ -73,6 +73,12 @@ describe('lesson Open Graph image URLs', () => {
     const url = new URL(getLessonOpenGraphUrl('pentecost', '2026-05-18T22:00:00.000Z'))
 
     expect(url.pathname).toBe('/lessons/pentecost/opengraph-image.png')
-    expect(url.searchParams.get('v')).toBe('2026-05-18T22:00:00.000Z')
+    expect(url.searchParams.get('v')).toBe('1779141600000')
+  })
+
+  it('leaves non-date version tokens alone', () => {
+    const url = new URL(getLessonOpenGraphUrl('pentecost', 'manual-refresh'))
+
+    expect(url.searchParams.get('v')).toBe('manual-refresh')
   })
 })

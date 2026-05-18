@@ -67,11 +67,17 @@ export const getLessonPath = (slug: string) => `/lessons/${slug}`
 
 export const getLessonOpenGraphPath = (slug: string) => `${getLessonPath(slug)}/opengraph-image.png`
 
+const getOpenGraphVersionToken = (version: string) => {
+  const timestamp = Date.parse(version)
+
+  return Number.isNaN(timestamp) ? version : String(timestamp)
+}
+
 export const getLessonOpenGraphUrl = (slug: string, version?: string | null) => {
   const url = new URL(getLessonOpenGraphPath(slug), getSiteOrigin())
 
   if (version) {
-    url.searchParams.set('v', version)
+    url.searchParams.set('v', getOpenGraphVersionToken(version))
   }
 
   return url.toString()
