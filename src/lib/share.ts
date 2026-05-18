@@ -65,22 +65,26 @@ export const getCanonicalUrl = (pathname = '/') => new URL(pathname, getSiteOrig
 
 export const getLessonPath = (slug: string) => `/lessons/${slug}`
 
-export const getLessonOpenGraphPath = (slug: string) => `${getLessonPath(slug)}/opengraph-image.png`
-
 const getOpenGraphVersionToken = (version: string) => {
   const timestamp = Date.parse(version)
 
   return Number.isNaN(timestamp) ? version : String(timestamp)
 }
 
-export const getLessonOpenGraphUrl = (slug: string, version?: string | null) => {
-  const url = new URL(getLessonOpenGraphPath(slug), getSiteOrigin())
+export const getLessonOpenGraphPath = (slug: string, version?: string | null) => {
+  const basePath = `${getLessonPath(slug)}/opengraph-image.png`
 
-  if (version) {
-    url.searchParams.set('v', getOpenGraphVersionToken(version))
+  if (!version) {
+    return basePath
   }
 
-  return url.toString()
+  const encodedVersion = encodeURIComponent(getOpenGraphVersionToken(version))
+
+  return `${getLessonPath(slug)}/opengraph-image/${encodedVersion}.png`
+}
+
+export const getLessonOpenGraphUrl = (slug: string, version?: string | null) => {
+  return new URL(getLessonOpenGraphPath(slug, version), getSiteOrigin()).toString()
 }
 
 export const getLessonMetadataLabel = (

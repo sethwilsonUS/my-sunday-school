@@ -63,22 +63,28 @@ describe('getFirstLessonArtworkUrl', () => {
 })
 
 describe('lesson Open Graph image URLs', () => {
-  it('uses a stable PNG route for crawlers that dislike generated metadata URLs', () => {
+  it('keeps an unversioned stable PNG route as a fallback', () => {
     expect(getLessonOpenGraphPath('2026-05-24-day-of-pentecost-a')).toBe(
       '/lessons/2026-05-24-day-of-pentecost-a/opengraph-image.png',
     )
   })
 
-  it('can version the social image URL when lesson content changes', () => {
+  it('uses a path-versioned social image URL when lesson content changes', () => {
     const url = new URL(getLessonOpenGraphUrl('pentecost', '2026-05-18T22:00:00.000Z'))
 
-    expect(url.pathname).toBe('/lessons/pentecost/opengraph-image.png')
-    expect(url.searchParams.get('v')).toBe('1779141600000')
+    expect(url.pathname).toBe('/lessons/pentecost/opengraph-image/1779141600000.png')
+    expect(url.search).toBe('')
   })
 
   it('leaves non-date version tokens alone', () => {
     const url = new URL(getLessonOpenGraphUrl('pentecost', 'manual-refresh'))
 
-    expect(url.searchParams.get('v')).toBe('manual-refresh')
+    expect(url.pathname).toBe('/lessons/pentecost/opengraph-image/manual-refresh.png')
+  })
+
+  it('encodes non-date version tokens as a single path segment', () => {
+    const url = getLessonOpenGraphUrl('pentecost', 'manual/refresh')
+
+    expect(url).toContain('/lessons/pentecost/opengraph-image/manual%2Frefresh.png')
   })
 })
