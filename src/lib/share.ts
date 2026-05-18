@@ -16,6 +16,8 @@ export const OPEN_GRAPH_SIZE = {
   width: 1200,
   height: 630,
 } as const
+export const OPEN_GRAPH_CONTENT_TYPE = 'image/png'
+export const LESSON_SOCIAL_IMAGE_ALT = 'Lesson sharing image'
 
 const withProtocol = (value: string | null | undefined) => {
   if (!value) {
@@ -63,7 +65,17 @@ export const getCanonicalUrl = (pathname = '/') => new URL(pathname, getSiteOrig
 
 export const getLessonPath = (slug: string) => `/lessons/${slug}`
 
-export const getLessonOpenGraphPath = (slug: string) => `${getLessonPath(slug)}/opengraph-image`
+export const getLessonOpenGraphPath = (slug: string) => `${getLessonPath(slug)}/opengraph-image.png`
+
+export const getLessonOpenGraphUrl = (slug: string, version?: string | null) => {
+  const url = new URL(getLessonOpenGraphPath(slug), getSiteOrigin())
+
+  if (version) {
+    url.searchParams.set('v', version)
+  }
+
+  return url.toString()
+}
 
 export const getLessonMetadataLabel = (
   lesson: Pick<Lesson, 'date' | 'lectionaryYear' | 'liturgicalSeason'>,

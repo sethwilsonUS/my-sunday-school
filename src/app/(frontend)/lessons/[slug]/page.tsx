@@ -9,7 +9,16 @@ import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
 import { markdownToHTML } from '@/lib/markdown'
 import { richTextToHTML } from '@/lib/richText'
-import { SITE_NAME, getCanonicalUrl, getLessonMetadataLabel, getLessonPath } from '@/lib/share'
+import {
+  LESSON_SOCIAL_IMAGE_ALT,
+  OPEN_GRAPH_CONTENT_TYPE,
+  OPEN_GRAPH_SIZE,
+  SITE_NAME,
+  getCanonicalUrl,
+  getLessonMetadataLabel,
+  getLessonOpenGraphUrl,
+  getLessonPath,
+} from '@/lib/share'
 
 type PageProps = {
   params: Promise<{
@@ -38,6 +47,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = `Study notes and resources for ${lesson.title}.`
   const lessonMetaLabel = getLessonMetadataLabel(lesson)
   const metadataTitle = `${lesson.title} | ${lessonMetaLabel}`
+  const socialImageUrl = getLessonOpenGraphUrl(slug, lesson.updatedAt)
+  const socialImage = {
+    alt: LESSON_SOCIAL_IMAGE_ALT,
+    height: OPEN_GRAPH_SIZE.height,
+    secureUrl: socialImageUrl,
+    type: OPEN_GRAPH_CONTENT_TYPE,
+    url: socialImageUrl,
+    width: OPEN_GRAPH_SIZE.width,
+  }
 
   return {
     alternates: {
@@ -46,6 +64,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     openGraph: {
       description,
+      images: [socialImage],
       siteName: SITE_NAME,
       title: metadataTitle,
       type: 'article',
@@ -57,6 +76,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: 'summary_large_image',
       description,
+      images: [socialImage],
       title: metadataTitle,
     },
   }

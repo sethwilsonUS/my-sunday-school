@@ -2,6 +2,7 @@ import { BrandMark } from '@/components/BrandMark'
 
 import {
   getSiteHostLabel,
+  OPEN_GRAPH_CONTENT_TYPE,
   OPEN_GRAPH_SIZE,
   SITE_NAME,
   SITE_SUBTITLE,
@@ -165,7 +166,7 @@ const bodyCopyStyle = {
 }
 
 export const ogSize = OPEN_GRAPH_SIZE
-export const ogContentType = 'image/png'
+export const ogContentType = OPEN_GRAPH_CONTENT_TYPE
 const siteHostLabel = getSiteHostLabel()
 
 export function SiteSocialCard() {
