@@ -4,31 +4,21 @@ import { getPublishedLessonBySlug } from '@/lib/lessons'
 import {
   LessonFallbackSocialCard,
   LessonSocialCard,
-  ogContentType,
   ogSize,
 } from '@/lib/social-image'
 import { fetchImageDataUrl, getFirstLessonArtworkUrl, getLessonMetadataLabel } from '@/lib/share'
 
-type ImageProps = {
-  params: Promise<{
-    slug: string
-  }>
+const socialImageHeaders = {
+  'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800',
 }
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-
-export const alt = 'Lesson sharing image'
-export const size = ogSize
-export const contentType = ogContentType
-
-export default async function OpenGraphImage({ params }: ImageProps) {
-  const { slug } = await params
+export async function createLessonSocialImageResponse(slug: string) {
   const lesson = await getPublishedLessonBySlug(slug)
 
   if (!lesson) {
     return new ImageResponse(<LessonFallbackSocialCard title="Lesson not found" />, {
       ...ogSize,
+      headers: socialImageHeaders,
     })
   }
 
@@ -43,6 +33,7 @@ export default async function OpenGraphImage({ params }: ImageProps) {
     ),
     {
       ...ogSize,
+      headers: socialImageHeaders,
     },
   )
 }

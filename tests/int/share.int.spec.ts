@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { Lesson, Media } from '@/payload-types'
-import { getFirstLessonArtworkUrl } from '@/lib/share'
+import { getFirstLessonArtworkUrl, getLessonOpenGraphPath, getLessonOpenGraphUrl } from '@/lib/share'
 
 const makeMedia = (overrides: Partial<Media>): Media => ({
   altText: 'Test artwork',
@@ -59,5 +59,20 @@ describe('getFirstLessonArtworkUrl', () => {
     expect(getFirstLessonArtworkUrl(makeLesson(artwork))).toBe(
       'https://cdn.example.com/original-only.jpg',
     )
+  })
+})
+
+describe('lesson Open Graph image URLs', () => {
+  it('uses a stable PNG route for crawlers that dislike generated metadata URLs', () => {
+    expect(getLessonOpenGraphPath('2026-05-24-day-of-pentecost-a')).toBe(
+      '/lessons/2026-05-24-day-of-pentecost-a/opengraph-image.png',
+    )
+  })
+
+  it('can version the social image URL when lesson content changes', () => {
+    const url = new URL(getLessonOpenGraphUrl('pentecost', '2026-05-18T22:00:00.000Z'))
+
+    expect(url.pathname).toBe('/lessons/pentecost/opengraph-image.png')
+    expect(url.searchParams.get('v')).toBe('2026-05-18T22:00:00.000Z')
   })
 })
