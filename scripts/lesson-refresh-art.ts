@@ -4,6 +4,8 @@ import { getPayload, type Payload } from 'payload'
 import type { Lesson, Media } from '../src/payload-types'
 import { resolveArtworkImage } from './art-source-resolver'
 import {
+  formatRefreshSummary,
+  getRefreshExitCode,
   getRefreshAction,
   parseRefreshArtArgs,
   refreshArtUsage,
@@ -22,7 +24,7 @@ type RefreshTarget = {
   media: Media
 }
 
-type RefreshTargetResult = 'would-refresh' | 'refreshed' | 'skipped'
+type RefreshTargetResult = 'would-refresh' | 'refreshed' | 'skipped' | 'unresolved'
 
 const PUBLISHED_TARGET_DELAY_MS = 750
 
@@ -41,17 +43,27 @@ async function main() {
   const failures: string[] = []
   let refreshed = 0
   let skipped = 0
+  let unresolved = 0
   let wouldRefresh = 0
 
   try {
     const targets = await getRefreshTargets(payload, options)
+    const targetDelayMs = getTargetDelayMs(options)
 
     console.log(`Refresh targets: ${targets.length}`)
+    if (targetDelayMs > 0) {
+      console.log(`Waiting ${targetDelayMs.toLocaleString()}ms between refresh targets.`)
+    }
+    if (options.retryCount > 0) {
+      console.log(
+        `Retrying retryable art-source fetches up to ${options.retryCount} time${options.retryCount === 1 ? '' : 's'} with ${options.retryDelayMs.toLocaleString()}ms base delay and ${options.maxRetryDelayMs.toLocaleString()}ms max delay.`,
+      )
+    }
 
     for (const [index, target] of targets.entries()) {
       try {
-        if (index > 0 && options.published) {
-          await delay(PUBLISHED_TARGET_DELAY_MS)
+        if (index > 0 && targetDelayMs > 0) {
+          await delay(targetDelayMs)
         }
 
         const result = await refreshTarget(payload, target, options)
@@ -60,6 +72,8 @@ async function main() {
           refreshed += 1
         } else if (result === 'would-refresh') {
           wouldRefresh += 1
+        } else if (result === 'unresolved') {
+          unresolved += 1
         } else {
           skipped += 1
         }
@@ -74,14 +88,22 @@ async function main() {
   }
 
   console.log(
-    `${options.write ? 'Write' : 'Dry run'} complete. Would refresh: ${wouldRefresh}. Refreshed: ${refreshed}. Skipped: ${skipped}. Failures: ${failures.length}.`,
+    formatRefreshSummary({
+      failures: failures.length,
+      refreshed,
+      skipped,
+      unresolved,
+      wouldRefresh,
+      write: options.write,
+    }),
   )
 
   if (failures.length > 0) {
     console.error('Failures:')
     failures.forEach((failure) => console.error(`  ${failure}`))
-    process.exitCode = 1
   }
+
+  process.exitCode = getRefreshExitCode({ failures: failures.length, unresolved })
 }
 
 async function getRefreshTargets(payload: Payload, options: RefreshArtOptions): Promise<RefreshTarget[]> {
@@ -196,6 +218,10 @@ function limitRefreshTargets(targets: RefreshTarget[], options: RefreshArtOption
   return options.limit ? targets.slice(0, options.limit) : targets
 }
 
+function getTargetDelayMs(options: RefreshArtOptions) {
+  return options.targetDelayMs ?? (options.published ? PUBLISHED_TARGET_DELAY_MS : 0)
+}
+
 function canResolveRefreshCandidate(media: Media) {
   return isAbsoluteHttpUrl(media.url) || isAbsoluteHttpUrl(media.wikimediaUrl)
 }
@@ -233,15 +259,19 @@ async function refreshTarget(
     sourceUrl: media.wikimediaUrl,
     title: media.altText,
     workDate: media.workDate,
+  }, {
+    maxRetryDelayMs: options.maxRetryDelayMs,
+    retryCount: options.retryCount,
+    retryDelayMs: options.retryDelayMs,
   }).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
     console.log('  candidate: unavailable')
-    console.log(`  decision: skip (candidate could not be resolved: ${message})`)
+    console.log(`  decision: unresolved (candidate could not be resolved: ${message})`)
     return null
   })
 
   if (!resolved) {
-    return 'skipped'
+    return 'unresolved'
   }
 
   const action = getRefreshAction(

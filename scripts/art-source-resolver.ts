@@ -126,10 +126,14 @@ export type ResolvedArtworkImage = ValidatedArtImageCandidate & {
 }
 
 export type ResolveArtworkImageOptions = {
+  delayFn?: (ms: number) => Promise<void>
   fetchFn?: typeof fetch
   maxBytes?: number
   maxPixels?: number
+  maxRetryDelayMs?: number
   maxSourcePageBytes?: number
+  retryCount?: number
+  retryDelayMs?: number
   timeoutMs?: number
 }
 
@@ -140,7 +144,9 @@ type CandidateHint = {
 
 const DEFAULT_MAX_IMAGE_BYTES = 60_000_000
 const DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
+const DEFAULT_MAX_RETRY_DELAY_MS = 30000
 const DEFAULT_MAX_SOURCE_PAGE_BYTES = 2_000_000
+const DEFAULT_RETRY_DELAY_MS = 5000
 
 export async function resolveArtworkImage(
   input: ArtworkResolverInput,
@@ -461,14 +467,80 @@ async function validateCandidate(
   }
 }
 
-function fetchWithResolverHeaders(
+async function fetchWithResolverHeaders(
   url: string,
   options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
 ) {
-  return options.fetchFn(url, {
-    headers: resolverHeaders(),
-    signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
-  })
+  const retryCount = options.retryCount ?? 0
+  let attempt = 0
+
+  while (true) {
+    try {
+      const response = await options.fetchFn(url, {
+        headers: resolverHeaders(),
+        signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
+      })
+
+      if (!isRetryableStatus(response.status) || attempt >= retryCount) {
+        return response
+      }
+
+      await response.body?.cancel().catch(() => undefined)
+      await waitForRetry(response, attempt, options)
+      attempt += 1
+    } catch (error) {
+      if (attempt >= retryCount) {
+        throw error
+      }
+
+      await waitForRetry(undefined, attempt, options)
+      attempt += 1
+    }
+  }
+}
+
+async function waitForRetry(
+  response: Response | undefined,
+  attempt: number,
+  options: ResolveArtworkImageOptions,
+) {
+  const retryAfterMs = response ? retryAfterHeaderMs(response.headers.get('retry-after')) : undefined
+  const uncappedDelayMs = retryAfterMs ?? (options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS) * (attempt + 1)
+  const delayMs = Math.min(uncappedDelayMs, options.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS)
+
+  if (delayMs <= 0) {
+    return
+  }
+
+  await (options.delayFn ?? delay)(delayMs)
+}
+
+function isRetryableStatus(status: number) {
+  return status === 429 || status >= 500
+}
+
+function retryAfterHeaderMs(value: string | null) {
+  if (!value) {
+    return undefined
+  }
+
+  const seconds = Number(value)
+
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000
+  }
+
+  const dateMs = Date.parse(value)
+
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now())
+  }
+
+  return undefined
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function readResponseBuffer(response: Response, maxBytes: number, label = 'image') {

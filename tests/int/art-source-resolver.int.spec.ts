@@ -281,6 +281,86 @@ describe('art source resolver network resolution', () => {
     ).rejects.toThrow('image exceeds maximum size 10 bytes')
   })
 
+  it('retries retryable candidate responses before giving up', async () => {
+    const image = await imageBuffer(1200, 800)
+    const retryDelays: number[] = []
+    let attempts = 0
+    const fetchFn: typeof fetch = async () => {
+      attempts += 1
+
+      if (attempts < 3) {
+        return new Response('rate limited', {
+          status: 429,
+          statusText: 'Too Many Requests',
+        })
+      }
+
+      return new Response(image, {
+        headers: { 'content-type': 'image/jpeg' },
+        status: 200,
+      })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/original.jpg',
+      },
+      {
+        delayFn: async (ms) => {
+          retryDelays.push(ms)
+        },
+        fetchFn,
+        retryCount: 2,
+        retryDelayMs: 25,
+      },
+    )
+
+    expect(attempts).toBe(3)
+    expect(retryDelays).toEqual([25, 50])
+    expect(resolved.dimensions).toEqual({ width: 1200, height: 800 })
+  })
+
+  it('caps retry-after delays from retryable responses', async () => {
+    const image = await imageBuffer(1200, 800)
+    const retryDelays: number[] = []
+    let attempts = 0
+    const fetchFn: typeof fetch = async () => {
+      attempts += 1
+
+      if (attempts === 1) {
+        return new Response('rate limited', {
+          headers: { 'retry-after': '120' },
+          status: 429,
+          statusText: 'Too Many Requests',
+        })
+      }
+
+      return new Response(image, {
+        headers: { 'content-type': 'image/jpeg' },
+        status: 200,
+      })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/original.jpg',
+      },
+      {
+        delayFn: async (ms) => {
+          retryDelays.push(ms)
+        },
+        fetchFn,
+        maxRetryDelayMs: 250,
+        retryCount: 1,
+        retryDelayMs: 25,
+      },
+    )
+
+    expect(attempts).toBe(2)
+    expect(retryDelays).toEqual([250])
+    expect(resolved.dimensions).toEqual({ width: 1200, height: 800 })
+  })
+
   it('caps source-page HTML reads and still validates direct candidates', async () => {
     const image = await imageBuffer(1300, 900)
     const fetchFn: typeof fetch = async (url) => {

@@ -3,6 +3,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  formatRefreshSummary,
+  getRefreshExitCode,
   getRefreshAction,
   parseRefreshArtArgs,
   refreshFilenameForMedia,
@@ -47,6 +49,37 @@ describe('lesson refresh art helpers', () => {
     })
   })
 
+  it('parses slow mode and explicit retry controls', () => {
+    expect(parseRefreshArtArgs(['--published', '--slow'])).toMatchObject({
+      published: true,
+      retryCount: 2,
+      retryDelayMs: 5000,
+      maxRetryDelayMs: 30000,
+      slow: true,
+      targetDelayMs: 3000,
+    })
+
+    expect(
+      parseRefreshArtArgs([
+        '--published',
+        '--slow',
+        '--retry-count',
+        '5',
+        '--retry-delay-ms',
+        '10000',
+        '--max-retry-delay-ms',
+        '4000',
+        '--target-delay-ms',
+        '7000',
+      ]),
+    ).toMatchObject({
+      maxRetryDelayMs: 4000,
+      retryCount: 5,
+      retryDelayMs: 10000,
+      targetDelayMs: 7000,
+    })
+  })
+
   it('rejects empty id entries', () => {
     expect(() => parseRefreshArtArgs(['--ids', '1,,2'])).toThrow('--ids must be a positive integer.')
     expect(() => parseRefreshArtArgs(['--ids', ','])).toThrow('--ids must be a positive integer.')
@@ -68,6 +101,22 @@ describe('lesson refresh art helpers', () => {
     )
   })
 
+  it('rejects invalid retry controls', () => {
+    expect(() => parseRefreshArtArgs(['--slow=false'])).toThrow('--slow does not accept a value.')
+    expect(() => parseRefreshArtArgs(['--retry-count', '-1'])).toThrow(
+      '--retry-count must be a non-negative integer.',
+    )
+    expect(() => parseRefreshArtArgs(['--retry-delay-ms', '1.5'])).toThrow(
+      '--retry-delay-ms must be a non-negative integer.',
+    )
+    expect(() => parseRefreshArtArgs(['--max-retry-delay-ms', '-1'])).toThrow(
+      '--max-retry-delay-ms must be a non-negative integer.',
+    )
+    expect(() => parseRefreshArtArgs(['--target-delay-ms', '1e3'])).toThrow(
+      '--target-delay-ms must be a non-negative integer.',
+    )
+  })
+
   it('requires confirmation for write mode and a bounded scope', () => {
     expect(() => parseRefreshArtArgs(['--write', '--slug', 'pentecost'])).toThrow(
       'Write mode requires --confirm-shared-db.',
@@ -76,6 +125,23 @@ describe('lesson refresh art helpers', () => {
     expect(() => parseRefreshArtArgs(['--write', '--confirm-shared-db', '--published'])).toThrow(
       'Write mode requires --slug, --ids, or --limit for a bounded scope.',
     )
+  })
+
+  it('reports unresolved candidates separately from normal skips', () => {
+    expect(
+      formatRefreshSummary({
+        failures: 0,
+        refreshed: 0,
+        skipped: 21,
+        unresolved: 8,
+        wouldRefresh: 1,
+        write: false,
+      }),
+    ).toBe('Dry run complete. Would refresh: 1. Refreshed: 0. Skipped: 21. Unresolved: 8. Failures: 0.')
+
+    expect(getRefreshExitCode({ failures: 0, unresolved: 0 })).toBe(0)
+    expect(getRefreshExitCode({ failures: 0, unresolved: 1 })).toBe(2)
+    expect(getRefreshExitCode({ failures: 1, unresolved: 0 })).toBe(1)
   })
 
   it('plans refresh only when the resolved candidate is materially better', () => {
