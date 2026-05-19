@@ -255,7 +255,7 @@ function getDirectImageUrl(value: string | undefined) {
       return undefined
     }
 
-    return /\.(?:jpe?g|png|gif|webp|tiff?)$/i.test(url.pathname) ? url.toString() : undefined
+    return /\.(?:avif|jpe?g|png|gif|svg|webp|tiff?)$/i.test(url.pathname) ? url.toString() : undefined
   } catch {
     return undefined
   }

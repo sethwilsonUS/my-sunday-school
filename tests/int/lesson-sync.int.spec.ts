@@ -117,6 +117,24 @@ describe('lesson sync artwork filenames', () => {
     )
   })
 
+  it('can derive the media filename extension from resolved MIME type', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Artist, *Work*, 1900',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/preview',
+      ].join('\n'),
+    )
+
+    expect(getProposedFilename(artwork, 'image/avif', 'https://example.test/original')).toBe(
+      'artist-work-1900.avif',
+    )
+    expect(getProposedFilename(artwork, 'image/svg+xml', 'https://example.test/original')).toBe(
+      'artist-work-1900.svg',
+    )
+  })
+
   it('parses higher-resolution alternate art-link fields for resolver input', () => {
     const [artwork] = parseArtLinks(
       [

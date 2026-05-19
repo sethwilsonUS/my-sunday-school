@@ -1,5 +1,6 @@
 import path from 'node:path'
 
+import { extensionFromMimeType } from './art-source-resolver'
 import type { ImageDimensions } from './art-source-resolver'
 
 export type LessonSyncInput = {
@@ -212,7 +213,7 @@ export function getCaption(artwork: ArtworkLink) {
 }
 
 export function getProposedFilename(artwork: ArtworkLink, mimeType: string, resolvedImageUrl = artwork.imageUrl) {
-  const extension = getExtensionFromUrl(resolvedImageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
+  const extension = getExtensionFromUrl(resolvedImageUrl) ?? extensionFromMimeType(mimeType)
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
@@ -276,21 +277,4 @@ function getExtensionFromUrl(url: string) {
   }
 
   return null
-}
-
-function getExtensionFromMimeType(mimeType: string) {
-  switch (mimeType.split(';')[0].trim().toLowerCase()) {
-    case 'image/jpeg':
-      return 'jpg'
-    case 'image/png':
-      return 'png'
-    case 'image/gif':
-      return 'gif'
-    case 'image/webp':
-      return 'webp'
-    case 'image/tiff':
-      return 'tif'
-    default:
-      return null
-  }
 }

@@ -329,6 +329,31 @@ describe('art source resolver network resolution', () => {
     expect(resolved.dimensions).toEqual({ width: 2136, height: 2848 })
   })
 
+  it('uses direct AVIF and SVG source URLs as candidates', async () => {
+    const avif = await imageBuffer(300, 300)
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" />'
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://example.test/source.avif') {
+        return new Response(avif, { headers: { 'content-type': 'image/avif' }, status: 200 })
+      }
+
+      if (href === 'https://example.test/source.svg') {
+        return new Response(svg, { headers: { 'content-type': 'image/svg+xml' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const avifResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.avif' }, { fetchFn })
+    const svgResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.svg' }, { fetchFn })
+
+    expect(avifResolved.url).toBe('https://example.test/source.avif')
+    expect(svgResolved.url).toBe('https://example.test/source.svg')
+    expect(svgResolved.dimensions).toEqual({ width: 200, height: 100 })
+  })
+
   it('keeps validating provided images when source-page metadata has a bad URL', async () => {
     const image = await imageBuffer(1300, 900)
     const fetchFn: typeof fetch = async (url) => {

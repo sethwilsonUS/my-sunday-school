@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 import { getPayload, type Payload } from 'payload'
 
 import type { Lesson, Media } from '../src/payload-types'
-import { resolveArtworkImage, type ImageDimensions } from './art-source-resolver'
+import { extensionFromMimeType, resolveArtworkImage, type ImageDimensions } from './art-source-resolver'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -223,29 +223,12 @@ function getExtensionFromUrl(url: string) {
   return null
 }
 
-function getExtensionFromMimeType(mimeType: string) {
-  switch (mimeType.split(';')[0].trim().toLowerCase()) {
-    case 'image/jpeg':
-      return 'jpg'
-    case 'image/png':
-      return 'png'
-    case 'image/gif':
-      return 'gif'
-    case 'image/webp':
-      return 'webp'
-    case 'image/tiff':
-      return 'tif'
-    default:
-      return null
-  }
-}
-
 function getProposedFilename(
   artwork: ArtworkLink,
   mimeType: string,
   resolvedImageUrl = artwork.imageUrl,
 ) {
-  const extension = getExtensionFromUrl(resolvedImageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
+  const extension = getExtensionFromUrl(resolvedImageUrl) ?? extensionFromMimeType(mimeType)
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
