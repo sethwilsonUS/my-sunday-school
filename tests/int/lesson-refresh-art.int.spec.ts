@@ -122,8 +122,20 @@ describe('lesson refresh art helpers', () => {
       'Write mode requires --confirm-shared-db.',
     )
 
-    expect(() => parseRefreshArtArgs(['--write', '--confirm-shared-db', '--published'])).toThrow(
-      'Write mode requires --slug, --ids, or --limit for a bounded scope.',
+    expect(() => parseRefreshArtArgs(['--write', '--confirm-shared-db'])).toThrow(
+      'Write mode requires --slug, --ids, or --published for a target scope.',
+    )
+
+    expect(parseRefreshArtArgs(['--write', '--confirm-shared-db', '--published'])).toMatchObject({
+      published: true,
+      write: true,
+    })
+  })
+
+  it('rejects blank slugs and standalone limits', () => {
+    expect(() => parseRefreshArtArgs(['--slug', '   '])).toThrow('--slug requires a non-empty value.')
+    expect(() => parseRefreshArtArgs(['--limit', '5'])).toThrow(
+      '--limit requires --published, --slug, or --ids.',
     )
   })
 

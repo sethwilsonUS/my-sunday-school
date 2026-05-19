@@ -144,6 +144,9 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
         break
       case '--slug':
         options.slug = readValue().trim()
+        if (!options.slug) {
+          throw new Error('--slug requires a non-empty value.')
+        }
         break
       case '--start-after':
         options.startAfter = parsePositiveInteger(readValue(), '--start-after')
@@ -179,8 +182,14 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
     throw new Error('Write mode requires --confirm-shared-db.')
   }
 
-  if (options.write && !options.slug && options.ids.length === 0 && !options.limit) {
-    throw new Error('Write mode requires --slug, --ids, or --limit for a bounded scope.')
+  const hasTargetSelector = Boolean(options.slug) || options.ids.length > 0 || options.published
+
+  if (options.limit && !hasTargetSelector) {
+    throw new Error('--limit requires --published, --slug, or --ids.')
+  }
+
+  if (options.write && !hasTargetSelector) {
+    throw new Error('Write mode requires --slug, --ids, or --published for a target scope.')
   }
 
   return options

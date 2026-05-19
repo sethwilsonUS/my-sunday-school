@@ -120,6 +120,7 @@ describe('art source resolver', () => {
     ['image/avif', 'avif'],
     ['image/gif', 'gif'],
     ['image/heif', 'heif'],
+    ['image/heic', 'heic'],
     ['image/webp', 'webp'],
     ['image/svg+xml', 'svg'],
     ['image/tiff', 'tif'],
@@ -495,14 +496,24 @@ describe('art source resolver network resolution', () => {
     expect(resolved.dimensions).toEqual({ width: 2136, height: 2848 })
   })
 
-  it('uses direct AVIF and SVG source URLs as candidates', async () => {
+  it('uses direct AVIF, HEIC, HEIF, and SVG source URLs as candidates', async () => {
     const avif = await imageBuffer(300, 300)
+    const heic = await imageBuffer(400, 500)
+    const heif = await imageBuffer(500, 400)
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" />'
     const fetchFn: typeof fetch = async (url) => {
       const href = fetchUrl(url)
 
       if (href === 'https://example.test/source.avif') {
         return new Response(avif, { headers: { 'content-type': 'image/avif' }, status: 200 })
+      }
+
+      if (href === 'https://example.test/source.heic') {
+        return new Response(heic, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      if (href === 'https://example.test/source.heif') {
+        return new Response(heif, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
       }
 
       if (href === 'https://example.test/source.svg') {
@@ -513,11 +524,65 @@ describe('art source resolver network resolution', () => {
     }
 
     const avifResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.avif' }, { fetchFn })
+    const heicResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.heic' }, { fetchFn })
+    const heifResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.heif' }, { fetchFn })
     const svgResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.svg' }, { fetchFn })
 
     expect(avifResolved.url).toBe('https://example.test/source.avif')
+    expect(heicResolved.url).toBe('https://example.test/source.heic')
+    expect(heifResolved.url).toBe('https://example.test/source.heif')
     expect(svgResolved.url).toBe('https://example.test/source.svg')
     expect(svgResolved.dimensions).toEqual({ width: 200, height: 100 })
+  })
+
+  it('rejects internal literal image URLs before fetching', async () => {
+    const fetchedUrls: string[] = []
+    const fetchFn: typeof fetch = async (url) => {
+      fetchedUrls.push(fetchUrl(url))
+      return new Response('should not fetch', { status: 200 })
+    }
+
+    await expect(
+      resolveArtworkImage(
+        {
+          imageUrl: 'http://127.0.0.1/private.jpg',
+        },
+        { fetchFn },
+      ),
+    ).rejects.toThrow('No usable image candidate found')
+
+    expect(fetchedUrls).toEqual([])
+  })
+
+  it('rejects redirects to internal network addresses', async () => {
+    const fetchedUrls: string[] = []
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+      fetchedUrls.push(href)
+
+      if (href === 'https://public.example/original.jpg') {
+        return new Response(null, {
+          headers: { location: 'http://169.254.169.254/latest/meta-data' },
+          status: 302,
+        })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    await expect(
+      resolveArtworkImage(
+        {
+          imageUrl: 'https://public.example/original.jpg',
+        },
+        {
+          fetchFn,
+          resolveHostnameFn: async () => ['203.0.113.10'],
+        },
+      ),
+    ).rejects.toThrow('No usable image candidate found')
+
+    expect(fetchedUrls).toEqual(['https://public.example/original.jpg'])
   })
 
   it('keeps validating provided images when source-page metadata has a bad URL', async () => {

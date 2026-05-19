@@ -1,4 +1,6 @@
 import crypto from 'node:crypto'
+import { lookup as dnsLookup } from 'node:dns/promises'
+import { isIP } from 'node:net'
 
 import sharp from 'sharp'
 
@@ -99,6 +101,8 @@ export function extensionFromMimeType(mimeType: string) {
       return 'gif'
     case 'image/heif':
       return 'heif'
+    case 'image/heic':
+      return 'heic'
     case 'image/webp':
       return 'webp'
     case 'image/tiff':
@@ -134,6 +138,7 @@ export type ResolveArtworkImageOptions = {
   maxSourcePageBytes?: number
   retryCount?: number
   retryDelayMs?: number
+  resolveHostnameFn?: (hostname: string) => Promise<string[]>
   timeoutMs?: number
 }
 
@@ -147,6 +152,7 @@ const DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
 const DEFAULT_MAX_RETRY_DELAY_MS = 30000
 const DEFAULT_MAX_SOURCE_PAGE_BYTES = 2_000_000
 const DEFAULT_RETRY_DELAY_MS = 5000
+const MAX_REDIRECTS = 5
 
 export async function resolveArtworkImage(
   input: ArtworkResolverInput,
@@ -192,35 +198,62 @@ async function collectCandidateHints(
 ) {
   const candidates: CandidateHint[] = []
 
-  addCandidate(candidates, input.imageUrl, 'provided image URL')
-  addCandidate(candidates, input.alternateImageUrl, 'alternate image URL')
-  addCandidate(candidates, getDirectImageUrl(input.sourceUrl ?? undefined), 'source image URL')
-  addCandidate(candidates, getDirectImageUrl(input.alternateSourceUrl ?? undefined), 'alternate source image URL')
+  await addCandidate(candidates, input.imageUrl, 'provided image URL', options, failures)
+  await addCandidate(candidates, input.alternateImageUrl, 'alternate image URL', options, failures)
+  await addCandidate(candidates, getDirectImageUrl(input.sourceUrl ?? undefined), 'source image URL', options, failures)
+  await addCandidate(
+    candidates,
+    getDirectImageUrl(input.alternateSourceUrl ?? undefined),
+    'alternate source image URL',
+    options,
+    failures,
+  )
 
   for (const sourceUrl of [input.sourceUrl, input.alternateSourceUrl, input.imageUrl, input.alternateImageUrl]) {
     const fileTitle = normalizeCommonsFileTitle(sourceUrl ?? undefined)
 
     if (fileTitle) {
       const commonsUrl = await fetchCommonsOriginal(fileTitle, options, failures)
-      addCandidate(candidates, commonsUrl, `Commons API original for ${fileTitle}`)
+      await addCandidate(candidates, commonsUrl, `Commons API original for ${fileTitle}`, options, failures)
     }
   }
 
   for (const sourceUrl of [input.sourceUrl, input.alternateSourceUrl]) {
-    addCandidate(candidates, getWgaImageUrl(sourceUrl ?? undefined), `WGA artwork image for ${sourceUrl}`)
+    await addCandidate(
+      candidates,
+      getWgaImageUrl(sourceUrl ?? undefined),
+      `WGA artwork image for ${sourceUrl}`,
+      options,
+      failures,
+    )
 
     const metadataImage = await fetchSourcePageImage(sourceUrl ?? undefined, options, failures)
-    addCandidate(candidates, metadataImage, `source-page metadata for ${sourceUrl}`)
+    await addCandidate(candidates, metadataImage, `source-page metadata for ${sourceUrl}`, options, failures)
   }
 
   return candidates
 }
 
-function addCandidate(candidates: CandidateHint[], url: string | null | undefined, reason: string) {
+async function addCandidate(
+  candidates: CandidateHint[],
+  url: string | null | undefined,
+  reason: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+  failures: string[],
+) {
   const normalized = url?.trim()
 
-  if (normalized && /^https?:\/\//i.test(normalized)) {
-    candidates.push({ reason, url: normalized })
+  if (!normalized) {
+    return
+  }
+
+  const validatedUrl = await validateExternalHttpUrl(normalized, options).catch((error: unknown) => {
+    failures.push(`${normalized}: ${error instanceof Error ? error.message : String(error)}`)
+    return undefined
+  })
+
+  if (validatedUrl) {
+    candidates.push({ reason, url: validatedUrl })
   }
 }
 
@@ -265,7 +298,7 @@ function getDirectImageUrl(value: string | undefined) {
       return undefined
     }
 
-    return /\.(?:avif|jpe?g|png|gif|svg|webp|tiff?)$/i.test(url.pathname) ? url.toString() : undefined
+    return /\.(?:avif|jpe?g|png|gif|svg|webp|heic|heif|tiff?)$/i.test(url.pathname) ? url.toString() : undefined
   } catch {
     return undefined
   }
@@ -371,7 +404,12 @@ async function fetchCommonsOriginal(
     }
 
     if (imageUrl && mime?.startsWith('image/')) {
-      return imageUrl
+      return await validateExternalHttpUrl(imageUrl, options).catch((error: unknown) => {
+        failures.push(
+          `${failureContext} returned an unsafe image URL: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        return undefined
+      })
     }
 
     failures.push(`${failureContext} returned non-image MIME ${mime}`)
@@ -426,7 +464,8 @@ async function fetchSourcePageImage(
   }
 
   try {
-    return new URL(decodeHtmlEntities(raw), sourceUrl).toString()
+    const metadataUrl = new URL(decodeHtmlEntities(raw), sourceUrl).toString()
+    return await validateExternalHttpUrl(metadataUrl, options)
   } catch (error: unknown) {
     failures.push(`${sourceUrl}: invalid source-page metadata URL: ${error instanceof Error ? error.message : String(error)}`)
     return undefined
@@ -476,10 +515,7 @@ async function fetchWithResolverHeaders(
 
   while (true) {
     try {
-      const response = await options.fetchFn(url, {
-        headers: resolverHeaders(),
-        signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
-      })
+      const response = await fetchExternalHttpUrl(url, options)
 
       if (!isRetryableStatus(response.status) || attempt >= retryCount) {
         return response
@@ -497,6 +533,166 @@ async function fetchWithResolverHeaders(
       attempt += 1
     }
   }
+}
+
+async function fetchExternalHttpUrl(
+  url: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+) {
+  let currentUrl = await validateExternalHttpUrl(url, options)
+
+  for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+    const response = await options.fetchFn(currentUrl, {
+      headers: resolverHeaders(),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
+    })
+
+    if (!isRedirectStatus(response.status)) {
+      return response
+    }
+
+    const location = response.headers.get('location')
+
+    if (!location) {
+      return response
+    }
+
+    await response.body?.cancel().catch(() => undefined)
+
+    if (redirectCount === MAX_REDIRECTS) {
+      throw new Error(`too many redirects fetching ${url}`)
+    }
+
+    currentUrl = await validateExternalHttpUrl(new URL(location, currentUrl).toString(), options)
+  }
+
+  throw new Error(`too many redirects fetching ${url}`)
+}
+
+function isRedirectStatus(status: number) {
+  return status >= 300 && status < 400
+}
+
+async function validateExternalHttpUrl(
+  value: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+) {
+  let url: URL
+
+  try {
+    url = new URL(value.trim())
+  } catch {
+    throw new Error('invalid URL')
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('URL must use http or https')
+  }
+
+  const hostname = normalizeHostname(url.hostname)
+
+  if (!hostname) {
+    throw new Error('URL hostname is required')
+  }
+
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    throw new Error('localhost URLs are not allowed')
+  }
+
+  if (isIP(hostname)) {
+    if (isInternalIpAddress(hostname)) {
+      throw new Error(`internal network address is not allowed: ${hostname}`)
+    }
+
+    return url.toString()
+  }
+
+  const resolvedAddresses = await resolveHostnameAddresses(hostname, options)
+  const internalAddress = resolvedAddresses.find((address) => isInternalIpAddress(address))
+
+  if (internalAddress) {
+    throw new Error(`hostname resolves to internal network address: ${internalAddress}`)
+  }
+
+  return url.toString()
+}
+
+async function resolveHostnameAddresses(
+  hostname: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+) {
+  if (options.resolveHostnameFn) {
+    return options.resolveHostnameFn(hostname)
+  }
+
+  if (options.fetchFn !== fetch) {
+    return []
+  }
+
+  const addresses = await dnsLookup(hostname, { all: true, verbatim: true })
+  return addresses.map((address) => address.address)
+}
+
+function normalizeHostname(hostname: string) {
+  return hostname
+    .replace(/^\[(.*)\]$/, '$1')
+    .replace(/\.$/, '')
+    .toLowerCase()
+}
+
+function isInternalIpAddress(address: string) {
+  const normalized = normalizeHostname(address)
+  const mappedIpv4 = normalized.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/)?.[1]
+
+  if (mappedIpv4) {
+    return isInternalIpv4Address(mappedIpv4)
+  }
+
+  if (normalized.startsWith('::ffff:')) {
+    return true
+  }
+
+  if (isIP(normalized) === 4) {
+    return isInternalIpv4Address(normalized)
+  }
+
+  if (isIP(normalized) === 6) {
+    return isInternalIpv6Address(normalized)
+  }
+
+  return false
+}
+
+function isInternalIpv4Address(address: string) {
+  const [first, second] = address.split('.').map((part) => Number(part))
+
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    first >= 224
+  )
+}
+
+function isInternalIpv6Address(address: string) {
+  if (address === '::' || address === '::1') {
+    return true
+  }
+
+  const firstSegment = address.split(':')[0]
+
+  if (!firstSegment) {
+    return false
+  }
+
+  const firstHextet = Number.parseInt(firstSegment, 16)
+
+  return (firstHextet & 0xffc0) === 0xfe80 || (firstHextet & 0xfe00) === 0xfc00
 }
 
 async function waitForRetry(
