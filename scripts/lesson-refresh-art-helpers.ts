@@ -37,6 +37,7 @@ export const refreshArtUsage = `Usage:
   pnpm lesson:refresh-art -- --write --confirm-shared-db --published --limit 5
 
 Default mode is dry run. Write mode requires --write --confirm-shared-db and a bounded scope.
+When used with --published, --limit caps the final deduped media refresh targets.
 `
 
 export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {

@@ -14,8 +14,6 @@ import {
 dotenv.config({ path: '.env.local' })
 dotenv.config()
 
-const { default: config } = await import('../src/payload.config.js')
-
 type LessonArtworkRow = NonNullable<Lesson['artworks']>[number]
 
 type RefreshTarget = {
@@ -23,6 +21,8 @@ type RefreshTarget = {
   lesson?: Pick<Lesson, 'id' | 'slug' | 'title'>
   media: Media
 }
+
+type RefreshTargetResult = 'would-refresh' | 'refreshed' | 'skipped'
 
 async function main() {
   const options = parseRefreshArtArgs(process.argv.slice(2))
@@ -34,10 +34,12 @@ async function main() {
 
   console.log(options.write ? 'Running lesson art refresh in WRITE mode.' : 'Running lesson art refresh as a dry run.')
 
+  const { default: config } = await import('../src/payload.config.js')
   const payload = await getPayload({ config })
   const failures: string[] = []
   let refreshed = 0
   let skipped = 0
+  let wouldRefresh = 0
 
   try {
     const targets = await getRefreshTargets(payload, options)
@@ -50,6 +52,8 @@ async function main() {
 
         if (result === 'refreshed') {
           refreshed += 1
+        } else if (result === 'would-refresh') {
+          wouldRefresh += 1
         } else {
           skipped += 1
         }
@@ -64,7 +68,7 @@ async function main() {
   }
 
   console.log(
-    `${options.write ? 'Write' : 'Dry run'} complete. Refreshed: ${refreshed}. Skipped: ${skipped}. Failures: ${failures.length}.`,
+    `${options.write ? 'Write' : 'Dry run'} complete. Would refresh: ${wouldRefresh}. Refreshed: ${refreshed}. Skipped: ${skipped}. Failures: ${failures.length}.`,
   )
 
   if (failures.length > 0) {
@@ -78,7 +82,7 @@ async function getRefreshTargets(payload: Payload, options: RefreshArtOptions): 
   if (options.ids.length > 0) {
     const targets: RefreshTarget[] = []
 
-    for (const id of options.ids) {
+    for (const id of uniqueIds(options.ids)) {
       targets.push({
         media: await payload.findByID({
           collection: 'media',
@@ -88,7 +92,7 @@ async function getRefreshTargets(payload: Payload, options: RefreshArtOptions): 
       })
     }
 
-    return targets
+    return limitRefreshTargets(targets, options)
   }
 
   const lessons = await getTargetLessons(payload, options)
@@ -114,7 +118,7 @@ async function getRefreshTargets(payload: Payload, options: RefreshArtOptions): 
     }
   }
 
-  return [...byMediaId.values()]
+  return limitRefreshTargets([...byMediaId.values()], options)
 }
 
 async function getTargetLessons(payload: Payload, options: RefreshArtOptions) {
@@ -146,16 +150,10 @@ async function getTargetLessons(payload: Payload, options: RefreshArtOptions) {
   let hasNextPage = true
 
   while (hasNextPage) {
-    const remainingLimit = options.limit ? options.limit - docs.length : undefined
-
-    if (typeof remainingLimit === 'number' && remainingLimit <= 0) {
-      break
-    }
-
     const result = await payload.find({
       collection: 'lessons',
       depth: 2,
-      limit: remainingLimit ? Math.min(remainingLimit, 100) : 100,
+      limit: 100,
       page,
       sort: 'id',
       where: {
@@ -184,7 +182,19 @@ function getArtworkMedia(row: LessonArtworkRow) {
   return typeof row.image === 'object' && row.image !== null ? row.image : null
 }
 
-async function refreshTarget(payload: Payload, target: RefreshTarget, options: RefreshArtOptions) {
+function uniqueIds(ids: number[]) {
+  return [...new Set(ids)]
+}
+
+function limitRefreshTargets(targets: RefreshTarget[], options: RefreshArtOptions) {
+  return options.limit ? targets.slice(0, options.limit) : targets
+}
+
+async function refreshTarget(
+  payload: Payload,
+  target: RefreshTarget,
+  options: RefreshArtOptions,
+): Promise<RefreshTargetResult> {
   const media = target.media
   const resolved = await resolveArtworkImage({
     artist: media.artist,
@@ -224,7 +234,7 @@ async function refreshTarget(payload: Payload, target: RefreshTarget, options: R
 
   if (!options.write) {
     console.log('  write: would refresh existing media original')
-    return 'skipped' as const
+    return 'would-refresh'
   }
 
   const filename = refreshFilenameForMedia(media, resolved.mimeType)
@@ -252,7 +262,7 @@ async function refreshTarget(payload: Payload, target: RefreshTarget, options: R
   })
 
   console.log('  write: refreshed existing media original')
-  return 'refreshed' as const
+  return 'refreshed'
 }
 
 main()
