@@ -171,6 +171,8 @@ async function collectCandidateHints(input: ArtworkResolverInput, fetchFn: typeo
 
   addCandidate(candidates, input.imageUrl, 'provided image URL')
   addCandidate(candidates, input.alternateImageUrl, 'alternate image URL')
+  addCandidate(candidates, getDirectImageUrl(input.sourceUrl ?? undefined), 'source image URL')
+  addCandidate(candidates, getDirectImageUrl(input.alternateSourceUrl ?? undefined), 'alternate source image URL')
 
   for (const sourceUrl of [input.sourceUrl, input.alternateSourceUrl, input.imageUrl, input.alternateImageUrl]) {
     const fileTitle = normalizeCommonsFileTitle(sourceUrl ?? undefined)
@@ -182,6 +184,8 @@ async function collectCandidateHints(input: ArtworkResolverInput, fetchFn: typeo
   }
 
   for (const sourceUrl of [input.sourceUrl, input.alternateSourceUrl]) {
+    addCandidate(candidates, getWgaImageUrl(sourceUrl ?? undefined), `WGA artwork image for ${sourceUrl}`)
+
     const metadataImage = await fetchSourcePageImage(sourceUrl ?? undefined, fetchFn, failures)
     addCandidate(candidates, metadataImage, `source-page metadata for ${sourceUrl}`)
   }
@@ -210,6 +214,65 @@ function uniqueCandidateHints(candidates: CandidateHint[]) {
     seen.add(key)
     return true
   })
+}
+
+function getDirectImageUrl(value: string | undefined) {
+  if (!value) {
+    return undefined
+  }
+
+  if (normalizeCommonsFileTitle(value)) {
+    return undefined
+  }
+
+  try {
+    const url = new URL(value)
+
+    if (!/^https?:$/i.test(url.protocol)) {
+      return undefined
+    }
+
+    if (url.pathname.startsWith('/wiki/')) {
+      return undefined
+    }
+
+    return /\.(?:jpe?g|png|gif|webp|tiff?)$/i.test(url.pathname) ? url.toString() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function getWgaImageUrl(sourceUrl: string | undefined) {
+  if (!sourceUrl) {
+    return undefined
+  }
+
+  try {
+    const url = new URL(sourceUrl)
+
+    if (url.hostname.toLowerCase() !== 'www.wga.hu') {
+      return undefined
+    }
+
+    if (!url.pathname.endsWith('.html')) {
+      return undefined
+    }
+
+    const imagePath = url.pathname
+      .replace(/^\/html_m\//, '/art/')
+      .replace(/^\/html\//, '/art/')
+
+    if (imagePath === url.pathname) {
+      return undefined
+    }
+
+    url.pathname = imagePath.replace(/\.html$/, '.jpg')
+    url.search = ''
+    url.hash = ''
+    return url.toString()
+  } catch {
+    return undefined
+  }
 }
 
 async function fetchCommonsOriginal(fileTitle: string, fetchFn: typeof fetch, failures: string[]) {

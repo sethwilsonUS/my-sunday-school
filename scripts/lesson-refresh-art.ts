@@ -24,6 +24,8 @@ type RefreshTarget = {
 
 type RefreshTargetResult = 'would-refresh' | 'refreshed' | 'skipped'
 
+const PUBLISHED_TARGET_DELAY_MS = 750
+
 async function main() {
   const options = parseRefreshArtArgs(process.argv.slice(2))
 
@@ -46,8 +48,12 @@ async function main() {
 
     console.log(`Refresh targets: ${targets.length}`)
 
-    for (const target of targets) {
+    for (const [index, target] of targets.entries()) {
       try {
+        if (index > 0 && options.published) {
+          await delay(PUBLISHED_TARGET_DELAY_MS)
+        }
+
         const result = await refreshTarget(payload, target, options)
 
         if (result === 'refreshed') {
@@ -190,19 +196,54 @@ function limitRefreshTargets(targets: RefreshTarget[], options: RefreshArtOption
   return options.limit ? targets.slice(0, options.limit) : targets
 }
 
+function canResolveRefreshCandidate(media: Media) {
+  return isAbsoluteHttpUrl(media.url) || isAbsoluteHttpUrl(media.wikimediaUrl)
+}
+
+function isAbsoluteHttpUrl(value: string | null | undefined) {
+  return Boolean(value && /^https?:\/\//i.test(value))
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function refreshTarget(
   payload: Payload,
   target: RefreshTarget,
   options: RefreshArtOptions,
 ): Promise<RefreshTargetResult> {
   const media = target.media
+
+  console.log(`[media ${media.id}] ${media.filename ?? '(no filename)'}`)
+  if (target.lesson) {
+    console.log(`  lesson: ${target.lesson.slug} (${target.lesson.title})`)
+  }
+  console.log(`  current: ${media.width ?? '?'}x${media.height ?? '?'} ${media.filesize?.toLocaleString() ?? '?'} bytes`)
+
+  if (!canResolveRefreshCandidate(media)) {
+    console.log('  candidate: unavailable')
+    console.log('  decision: skip (media has no absolute image or source URL to resolve)')
+    return 'skipped'
+  }
+
   const resolved = await resolveArtworkImage({
     artist: media.artist,
     imageUrl: media.url,
     sourceUrl: media.wikimediaUrl,
     title: media.altText,
     workDate: media.workDate,
+  }).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error)
+    console.log('  candidate: unavailable')
+    console.log(`  decision: skip (candidate could not be resolved: ${message})`)
+    return null
   })
+
+  if (!resolved) {
+    return 'skipped'
+  }
+
   const action = getRefreshAction(
     {
       artist: media.artist,
@@ -217,11 +258,6 @@ async function refreshTarget(
     resolved,
   )
 
-  console.log(`[media ${media.id}] ${media.filename ?? '(no filename)'}`)
-  if (target.lesson) {
-    console.log(`  lesson: ${target.lesson.slug} (${target.lesson.title})`)
-  }
-  console.log(`  current: ${media.width ?? '?'}x${media.height ?? '?'} ${media.filesize?.toLocaleString() ?? '?'} bytes`)
   console.log(
     `  candidate: ${resolved.dimensions.width}x${resolved.dimensions.height} ${resolved.contentLength.toLocaleString()} bytes`,
   )

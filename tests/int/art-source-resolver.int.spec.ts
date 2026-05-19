@@ -219,6 +219,55 @@ describe('art source resolver network resolution', () => {
     expect(resolved.sha256).toMatch(/^[a-f0-9]{64}$/)
   })
 
+  it('derives WGA artwork image URLs from WGA source pages', async () => {
+    const image = await imageBuffer(1028, 1200)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://www.wga.hu/art/d/duccio/maesta/crown_v/cro_v_1a.jpg') {
+        return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        sourceUrl: 'https://www.wga.hu/html_m/d/duccio/maesta/crown_v/cro_v_1a.html',
+        title: 'Appearance Behind Locked Doors',
+      },
+      { fetchFn },
+    )
+
+    expect(resolved.url).toBe('https://www.wga.hu/art/d/duccio/maesta/crown_v/cro_v_1a.jpg')
+    expect(resolved.dimensions).toEqual({ width: 1028, height: 1200 })
+    expect(resolved.changedFromProvided).toBe(false)
+  })
+
+  it('uses direct image source URLs as candidates', async () => {
+    const image = await imageBuffer(2136, 2848)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://upload.wikimedia.org/wikipedia/commons/8/84/Chartres_JBU01.JPG') {
+        return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        sourceUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/84/Chartres_JBU01.JPG',
+        title: 'Chartres Cathedral',
+      },
+      { fetchFn },
+    )
+
+    expect(resolved.url).toBe('https://upload.wikimedia.org/wikipedia/commons/8/84/Chartres_JBU01.JPG')
+    expect(resolved.dimensions).toEqual({ width: 2136, height: 2848 })
+  })
+
   it('keeps validating provided images when source-page metadata has a bad URL', async () => {
     const image = await imageBuffer(1300, 900)
     const fetchFn: typeof fetch = async (url) => {
