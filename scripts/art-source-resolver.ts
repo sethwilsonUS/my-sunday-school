@@ -23,6 +23,11 @@ export function normalizeCommonsFileTitle(value: string | undefined) {
 
   try {
     const url = new URL(value.trim())
+
+    if (url.hostname.toLowerCase() !== 'commons.wikimedia.org') {
+      return undefined
+    }
+
     const decodedPath = decodeURIComponent(url.pathname)
     const filePageMatch = decodedPath.match(/\/wiki\/File:(.+)$/)
     const redirectMatch = decodedPath.match(/\/wiki\/Special:Redirect\/file\/(.+)$/)

@@ -53,6 +53,13 @@ describe('art source resolver', () => {
     ).toBe('El Greco - The Pentecost - WGA10533.jpg')
   })
 
+  it('does not normalize non-Commons wiki file URLs as Commons titles', () => {
+    expect(normalizeCommonsFileTitle('https://museum.example/wiki/File:Collection_Image.jpg')).toBeUndefined()
+    expect(
+      normalizeCommonsFileTitle('https://museum.example/wiki/Special:Redirect/file/Collection%20Image.jpg'),
+    ).toBeUndefined()
+  })
+
   it('chooses the candidate with the largest pixel area first', () => {
     const chosen = chooseBestValidatedCandidate([
       candidate('https://example.test/small.jpg', { width: 700, height: 900 }, 800_000),
@@ -176,7 +183,7 @@ describe('art source resolver network resolution', () => {
     const image = await imageBuffer(1400, 1000)
     const fetchFn = async (url: string) => {
       if (url === 'https://museum.example/artwork') {
-        return new Response('<meta property="og:image" content="https://museum.example/images/art.jpg">', {
+        return new Response('<meta property="og:image" content="/images/art.jpg">', {
           headers: { 'content-type': 'text/html' },
           status: 200,
         })
