@@ -38,10 +38,28 @@ describe('art source resolver', () => {
     ).toBe('El Greco - The Pentecost - WGA10533.jpg')
   })
 
-  it('chooses the candidate with the largest pixel area, then filesize', () => {
+  it('chooses the candidate with the largest pixel area first', () => {
     const chosen = chooseBestValidatedCandidate([
       candidate('https://example.test/small.jpg', { width: 700, height: 900 }, 800_000),
       candidate('https://example.test/better.jpg', { width: 1600, height: 1200 }, 300_000),
+      candidate('https://example.test/big-file-smaller-area.jpg', { width: 1000, height: 1000 }, 900_000),
+    ])
+
+    expect(chosen?.url).toBe('https://example.test/better.jpg')
+  })
+
+  it('chooses the longer longest dimension when pixel area is equal', () => {
+    const chosen = chooseBestValidatedCandidate([
+      candidate('https://example.test/bigger-file-shorter-longest.jpg', { width: 1000, height: 1000 }, 900_000),
+      candidate('https://example.test/smaller-file-longer-longest.jpg', { width: 2000, height: 500 }, 300_000),
+    ])
+
+    expect(chosen?.url).toBe('https://example.test/smaller-file-longer-longest.jpg')
+  })
+
+  it('chooses the larger filesize when pixel area and longest dimension are equal', () => {
+    const chosen = chooseBestValidatedCandidate([
+      candidate('https://example.test/equal-area-smaller-file.jpg', { width: 1600, height: 1200 }, 300_000),
       candidate('https://example.test/equal-area-bigger-file.jpg', { width: 1200, height: 1600 }, 900_000),
     ])
 
