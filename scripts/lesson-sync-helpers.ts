@@ -1,6 +1,7 @@
 import path from 'node:path'
 
 export type LessonSyncInput = {
+  collect?: string
   date: string
   lectionaryYear?: 'A' | 'B' | 'C'
   liturgicalSeason: LiturgicalSeasonValue
@@ -41,6 +42,7 @@ export type LessonSyncTarget =
     }
 
 export type ArtworkLink = {
+  accessibleDescription?: string
   alternateImageUrl?: string
   alternateSourceUrl?: string
   artist: string
@@ -109,6 +111,7 @@ export function chooseLessonSyncTarget(
 
 export function buildLessonSyncData(input: LessonSyncInput) {
   return {
+    collect: cleanString(input.collect),
     date: input.date,
     lectionaryYear: input.lectionaryYear,
     liturgicalSeason: input.liturgicalSeason,
@@ -117,6 +120,10 @@ export function buildLessonSyncData(input: LessonSyncInput) {
     status: 'draft' as const,
     title: input.title,
   }
+}
+
+function cleanString(value: string | undefined) {
+  return value?.trim() || undefined
 }
 
 export function slugify(value: string) {
@@ -162,6 +169,11 @@ export function parseArtLinks(markdown: string) {
 
     artworks.push({
       ...parsedHeading,
+      accessibleDescription:
+        fields.get('accessible description') ??
+        fields.get('accessibility description') ??
+        fields.get('description') ??
+        fields.get('alt text'),
       alternateImageUrl:
         fields.get('alternate image') ??
         fields.get('alternate commons image') ??
@@ -183,6 +195,10 @@ export function parseArtLinks(markdown: string) {
 }
 
 export function getAltText(artwork: ArtworkLink) {
+  if (artwork.accessibleDescription?.trim()) {
+    return artwork.accessibleDescription.trim()
+  }
+
   return `${artwork.title} by ${artwork.artist}${artwork.workDate ? `, ${artwork.workDate}` : ''}.`
 }
 

@@ -29,6 +29,7 @@ const { default: config } = await import('../src/payload.config.js')
 
 type Options = {
   artLinksPath?: string
+  collect?: string
   confirmSharedDB: boolean
   date?: string
   help: boolean
@@ -51,8 +52,8 @@ type MediaMatch = {
 }
 
 const usage = `Usage:
-  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --art-links /path/to/art-links.md --replace-existing-art
-  pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --art-links /path/to/art-links.md --replace-existing-art
+  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --replace-existing-art
+  pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --replace-existing-art
 
 Default mode is a dry run. Write mode requires --write and --confirm-shared-db. Matching is by sourceLectionaryUrl + date first, then slug. Published matches are blocked by default.
 `
@@ -86,6 +87,9 @@ function parseArgs(args: string[]): Options {
         break
       case '--confirm-shared-db':
         options.confirmSharedDB = true
+        break
+      case '--collect':
+        options.collect = getValue()
         break
       case '--date':
         options.date = getValue()
@@ -165,6 +169,7 @@ function optionsToSyncInput(options: Options): LessonSyncInput {
   const slug = options.slug?.trim() || slugify([date, title].join(' '))
 
   return {
+    collect: options.collect,
     date,
     lectionaryYear: options.lectionaryYear,
     liturgicalSeason,

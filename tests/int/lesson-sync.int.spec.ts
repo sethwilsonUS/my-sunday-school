@@ -5,12 +5,15 @@ import { describe, expect, it } from 'vitest'
 import {
   buildLessonSyncData,
   chooseLessonSyncTarget,
+  getAltText,
   normalizeSourceLectionaryUrl,
+  parseArtLinks,
   type ExistingLessonForSync,
   type LessonSyncInput,
 } from '../../scripts/lesson-sync-helpers'
 
 const syncInput: LessonSyncInput = {
+  collect: 'O God, the King of glory, do not leave us comfortless. Amen.',
   date: '2026-05-10',
   lectionaryYear: 'A',
   liturgicalSeason: 'easter',
@@ -72,6 +75,7 @@ describe('lesson sync planning', () => {
     expect(target.action).toBe('create-draft')
     expect(data).toMatchObject({
       date: '2026-05-10',
+      collect: 'O God, the King of glory, do not leave us comfortless. Amen.',
       lectionaryYear: 'A',
       liturgicalSeason: 'easter',
       slug: '2026-05-10-easter-6a',
@@ -79,5 +83,19 @@ describe('lesson sync planning', () => {
       status: 'draft',
       title: 'Known, Near, and Not Orphaned',
     })
+  })
+
+  it('uses accessibility descriptions from art links as media alt text', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Raphael, *St Paul Preaching at Athens*, c. 1515-1516',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/image.jpg',
+        '- Description: Paul stands before a group of listeners in Athens.',
+      ].join('\n'),
+    )
+
+    expect(getAltText(artwork)).toBe('Paul stands before a group of listeners in Athens.')
   })
 })
