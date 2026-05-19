@@ -38,6 +38,9 @@ const imageBuffer = (width: number, height: number) =>
     .jpeg()
     .toBuffer()
 
+const fetchUrl = (url: Parameters<typeof fetch>[0]) =>
+  typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+
 describe('art source resolver', () => {
   it('normalizes Commons file page and Special:Redirect URLs to file titles', () => {
     expect(
@@ -128,8 +131,10 @@ describe('art source resolver network resolution', () => {
   it('uses Commons API imageinfo when a Commons source page is provided', async () => {
     const original = await imageBuffer(1600, 1200)
     const direct = await imageBuffer(700, 900)
-    const fetchFn = async (url: string) => {
-      if (url.startsWith('https://commons.wikimedia.org/w/api.php')) {
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
         return new Response(
           JSON.stringify({
             query: {
@@ -152,11 +157,11 @@ describe('art source resolver network resolution', () => {
         )
       }
 
-      if (url === 'https://example.test/direct.jpg') {
+      if (href === 'https://example.test/direct.jpg') {
         return new Response(direct, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
       }
 
-      if (url === 'https://upload.wikimedia.org/original.jpg') {
+      if (href === 'https://upload.wikimedia.org/original.jpg') {
         return new Response(original, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
       }
 
@@ -181,15 +186,17 @@ describe('art source resolver network resolution', () => {
 
   it('falls back to source-page og:image metadata when the source is not Commons', async () => {
     const image = await imageBuffer(1400, 1000)
-    const fetchFn = async (url: string) => {
-      if (url === 'https://museum.example/artwork') {
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://museum.example/artwork') {
         return new Response('<meta property="og:image" content="/images/art.jpg">', {
           headers: { 'content-type': 'text/html' },
           status: 200,
         })
       }
 
-      if (url === 'https://museum.example/images/art.jpg') {
+      if (href === 'https://museum.example/images/art.jpg') {
         return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
       }
 
@@ -208,5 +215,68 @@ describe('art source resolver network resolution', () => {
 
     expect(resolved.url).toBe('https://museum.example/images/art.jpg')
     expect(resolved.dimensions).toEqual({ width: 1400, height: 1000 })
+    expect(resolved.changedFromProvided).toBe(false)
+    expect(resolved.sha256).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('keeps validating provided images when source-page metadata has a bad URL', async () => {
+    const image = await imageBuffer(1300, 900)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://museum.example/artwork') {
+        return new Response('<meta property="og:image" content="https://[invalid">', {
+          headers: { 'content-type': 'text/html' },
+          status: 200,
+        })
+      }
+
+      if (href === 'https://example.test/provided.jpg') {
+        return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/provided.jpg',
+        sourceUrl: 'https://museum.example/artwork',
+        title: 'Museum Work',
+      },
+      { fetchFn },
+    )
+
+    expect(resolved.url).toBe('https://example.test/provided.jpg')
+    expect(resolved.failures.some((failure) => failure.includes('https://museum.example/artwork'))).toBe(true)
+  })
+
+  it('records Commons JSON failures and still validates provided images', async () => {
+    const image = await imageBuffer(1300, 900)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
+        return new Response('{not json', { headers: { 'content-type': 'application/json' }, status: 200 })
+      }
+
+      if (href === 'https://example.test/provided.jpg') {
+        return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/provided.jpg',
+        sourceUrl: 'https://commons.wikimedia.org/wiki/File:Broken_Metadata.jpg',
+        title: 'Broken Metadata',
+      },
+      { fetchFn },
+    )
+
+    expect(resolved.url).toBe('https://example.test/provided.jpg')
+    expect(resolved.failures.some((failure) => failure.includes('Commons JSON parse failed'))).toBe(true)
   })
 })

@@ -151,6 +151,7 @@ export async function resolveArtworkImage(
   }
 
   const chosen = chooseBestValidatedCandidate(validated)
+  const providedImageUrl = input.imageUrl?.trim() || undefined
 
   if (!chosen) {
     throw new Error(`No usable image candidate found. ${failures.join('; ')}`.trim())
@@ -158,9 +159,9 @@ export async function resolveArtworkImage(
 
   return {
     ...chosen,
-    changedFromProvided: normalizeUrl(chosen.url) !== normalizeUrl(input.imageUrl ?? undefined),
+    changedFromProvided: Boolean(providedImageUrl) && normalizeUrl(chosen.url) !== normalizeUrl(providedImageUrl),
     failures,
-    providedImageUrl: input.imageUrl?.trim() || undefined,
+    providedImageUrl,
     sha256: crypto.createHash('sha256').update(chosen.buffer).digest('hex'),
   }
 }
@@ -232,9 +233,13 @@ async function fetchCommonsOriginal(fileTitle: string, fetchFn: typeof fetch, fa
     return undefined
   }
 
-  const data = (await response.json().catch(() => null)) as unknown
+  const data = (await response.json().catch((error: unknown) => {
+    failures.push(`${url}: Commons JSON parse failed: ${error instanceof Error ? error.message : String(error)}`)
+    return null
+  })) as unknown
 
   if (!isRecord(data) || !isRecord(data.query) || !isRecord(data.query.pages)) {
+    failures.push(`${url}: Commons response did not include query.pages`)
     return undefined
   }
 
@@ -268,7 +273,15 @@ async function fetchSourcePageImage(sourceUrl: string | undefined, fetchFn: type
     return undefined
   }
 
-  const html = await response.text()
+  const html = await response.text().catch((error: unknown) => {
+    failures.push(`${sourceUrl}: source page read failed: ${error instanceof Error ? error.message : String(error)}`)
+    return undefined
+  })
+
+  if (!html) {
+    return undefined
+  }
+
   const match =
     html.match(
       /<meta[^>]+(?:property|name|itemprop)=["'](?:og:image|twitter:image|thumbnail|image)["'][^>]+content=["']([^"']+)["'][^>]*>/i,
@@ -283,7 +296,12 @@ async function fetchSourcePageImage(sourceUrl: string | undefined, fetchFn: type
     return undefined
   }
 
-  return new URL(decodeHtmlEntities(raw), sourceUrl).toString()
+  try {
+    return new URL(decodeHtmlEntities(raw), sourceUrl).toString()
+  } catch (error: unknown) {
+    failures.push(`${sourceUrl}: invalid source-page metadata URL: ${error instanceof Error ? error.message : String(error)}`)
+    return undefined
+  }
 }
 
 async function validateCandidate(
