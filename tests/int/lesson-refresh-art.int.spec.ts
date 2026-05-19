@@ -40,11 +40,32 @@ describe('lesson refresh art helpers', () => {
       ids: [122, 123, 126],
       write: false,
     })
+
+    expect(parseRefreshArtArgs(['--slug=alpha=beta'])).toMatchObject({
+      slug: 'alpha=beta',
+      write: false,
+    })
   })
 
   it('rejects empty id entries', () => {
     expect(() => parseRefreshArtArgs(['--ids', '1,,2'])).toThrow('--ids must be a positive integer.')
     expect(() => parseRefreshArtArgs(['--ids', ','])).toThrow('--ids must be a positive integer.')
+  })
+
+  it('rejects inline values for boolean flags', () => {
+    expect(() => parseRefreshArtArgs(['--write=false'])).toThrow('--write does not accept a value.')
+    expect(() => parseRefreshArtArgs(['--confirm-shared-db=false'])).toThrow(
+      '--confirm-shared-db does not accept a value.',
+    )
+    expect(() => parseRefreshArtArgs(['--published=false'])).toThrow('--published does not accept a value.')
+  })
+
+  it('rejects non-decimal positive integer values', () => {
+    expect(() => parseRefreshArtArgs(['--ids', '1e3'])).toThrow('--ids must be a positive integer.')
+    expect(() => parseRefreshArtArgs(['--limit', '0x10'])).toThrow('--limit must be a positive integer.')
+    expect(() => parseRefreshArtArgs(['--start-after', '01'])).toThrow(
+      '--start-after must be a positive integer.',
+    )
   })
 
   it('requires confirmation for write mode and a bounded scope', () => {
@@ -79,6 +100,12 @@ describe('lesson refresh art helpers', () => {
     )
 
     expect(refreshFilenameForMedia(media({ filename: 'creation.png' }), 'image/jpeg')).toBe(
+      'creation.jpg',
+    )
+
+    expect(refreshFilenameForMedia(media({ filename: undefined }), 'image/png')).toBe('artwork.png')
+    expect(refreshFilenameForMedia(media({ filename: 'Creation.JPG' }), 'image/jpeg')).toBe('Creation.JPG')
+    expect(refreshFilenameForMedia(media({ filename: 'creation.webp' }), 'application/octet-stream')).toBe(
       'creation.jpg',
     )
   })

@@ -55,7 +55,10 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
       continue
     }
 
-    const [flag, inlineValue] = arg.split('=')
+    const inlineValueSeparatorIndex = arg.indexOf('=')
+    const hasInlineValue = inlineValueSeparatorIndex !== -1
+    const flag = hasInlineValue ? arg.slice(0, inlineValueSeparatorIndex) : arg
+    const inlineValue = hasInlineValue ? arg.slice(inlineValueSeparatorIndex + 1) : undefined
     const readValue = () => {
       const value = inlineValue ?? args[index + 1]
 
@@ -72,10 +75,12 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
 
     switch (flag) {
       case '--confirm-shared-db':
+        assertNoInlineValue(flag, hasInlineValue)
         options.confirmSharedDB = true
         break
       case '--help':
       case '-h':
+        assertNoInlineValue(flag, hasInlineValue)
         options.help = true
         break
       case '--ids':
@@ -88,6 +93,7 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
         options.limit = parsePositiveInteger(readValue(), '--limit')
         break
       case '--published':
+        assertNoInlineValue(flag, hasInlineValue)
         options.published = true
         break
       case '--slug':
@@ -97,6 +103,7 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
         options.startAfter = parsePositiveInteger(readValue(), '--start-after')
         break
       case '--write':
+        assertNoInlineValue(flag, hasInlineValue)
         options.write = true
         break
       default:
@@ -151,11 +158,21 @@ export function refreshFilenameForMedia(media: Pick<RefreshMediaSummary, 'filena
 }
 
 function parsePositiveInteger(value: string, flag: string) {
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error(`${flag} must be a positive integer.`)
+  }
+
   const parsed = Number(value)
 
-  if (!Number.isInteger(parsed) || parsed <= 0) {
+  if (!Number.isSafeInteger(parsed)) {
     throw new Error(`${flag} must be a positive integer.`)
   }
 
   return parsed
+}
+
+function assertNoInlineValue(flag: string, hasInlineValue: boolean) {
+  if (hasInlineValue) {
+    throw new Error(`${flag} does not accept a value.`)
+  }
 }
