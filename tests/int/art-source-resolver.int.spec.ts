@@ -279,4 +279,53 @@ describe('art source resolver network resolution', () => {
     expect(resolved.url).toBe('https://example.test/provided.jpg')
     expect(resolved.failures.some((failure) => failure.includes('Commons JSON parse failed'))).toBe(true)
   })
+
+  it('records Commons page imageinfo failures and still validates provided images', async () => {
+    const image = await imageBuffer(1300, 900)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
+        return new Response(
+          JSON.stringify({
+            query: {
+              pages: {
+                '123': {
+                  imageinfo: [
+                    {
+                      mime: 'text/html',
+                      url: 'https://commons.wikimedia.org/wiki/File:Not_Image',
+                    },
+                  ],
+                },
+              },
+            },
+          }),
+          { headers: { 'content-type': 'application/json' }, status: 200 },
+        )
+      }
+
+      if (href === 'https://example.test/provided.jpg') {
+        return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/provided.jpg',
+        sourceUrl: 'https://commons.wikimedia.org/wiki/File:Malformed_Imageinfo.jpg',
+        title: 'Malformed Imageinfo',
+      },
+      { fetchFn },
+    )
+
+    expect(resolved.url).toBe('https://example.test/provided.jpg')
+    expect(
+      resolved.failures.some(
+        (failure) => failure.includes('Malformed Imageinfo.jpg') && failure.includes('non-image MIME'),
+      ),
+    ).toBe(true)
+  })
 })

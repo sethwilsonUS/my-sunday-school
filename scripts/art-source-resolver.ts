@@ -244,16 +244,41 @@ async function fetchCommonsOriginal(fileTitle: string, fetchFn: typeof fetch, fa
   }
 
   for (const page of Object.values(data.query.pages)) {
-    if (!isRecord(page) || !Array.isArray(page.imageinfo) || !isRecord(page.imageinfo[0])) {
+    const failureContext = `${url}: Commons imageinfo for ${fileTitle}`
+
+    if (!isRecord(page)) {
+      failures.push(`${failureContext} had a malformed page entry`)
+      continue
+    }
+
+    if (!Array.isArray(page.imageinfo)) {
+      failures.push(`${failureContext} did not include imageinfo`)
+      continue
+    }
+
+    if (!isRecord(page.imageinfo[0])) {
+      failures.push(`${failureContext} did not include a usable imageinfo entry`)
       continue
     }
 
     const imageUrl = stringValue(page.imageinfo[0].url)
     const mime = stringValue(page.imageinfo[0].mime)
 
+    if (!imageUrl) {
+      failures.push(`${failureContext} did not include an image URL`)
+      continue
+    }
+
+    if (!mime) {
+      failures.push(`${failureContext} did not include an image MIME type`)
+      continue
+    }
+
     if (imageUrl && mime?.startsWith('image/')) {
       return imageUrl
     }
+
+    failures.push(`${failureContext} returned non-image MIME ${mime}`)
   }
 
   return undefined
