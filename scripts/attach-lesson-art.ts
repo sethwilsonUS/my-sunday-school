@@ -1,10 +1,16 @@
-import crypto from 'node:crypto'
-import path from 'node:path'
-
 import dotenv from 'dotenv'
 import { getPayload, type Payload } from 'payload'
 
 import type { Lesson, Media } from '../src/payload-types'
+import { resolveArtworkImage } from './art-source-resolver'
+import {
+  getAltText,
+  getCaption,
+  getProposedFilename,
+  parseArtLinks,
+  type ArtworkLink,
+  type DownloadedArtwork,
+} from './lesson-sync-helpers'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -18,26 +24,6 @@ type Options = {
   lessonSlug?: string
   replaceExistingArt: boolean
   write: boolean
-}
-
-type ArtworkLink = {
-  alternateImageUrl?: string
-  alternateSourceUrl?: string
-  artist: string
-  heading: string
-  imageUrl: string
-  note?: string
-  sourceUrl: string
-  title: string
-  workDate?: string
-}
-
-type DownloadedArtwork = ArtworkLink & {
-  buffer: Buffer
-  contentLength: number
-  hash: string
-  mimeType: string
-  proposedFilename: string
 }
 
 type MediaMatch = {
@@ -115,170 +101,20 @@ function requireValue(value: string | undefined, flag: string) {
   return value.trim()
 }
 
-function stripMarkdown(value: string) {
-  return value.replace(/\*\*/g, '').replace(/\*/g, '').replace(/\s+/g, ' ').trim()
-}
-
-function parseHeading(heading: string) {
-  const normalized = stripMarkdown(heading.replace(/^#+\s*/, ''))
-  const firstCommaIndex = normalized.indexOf(',')
-
-  if (firstCommaIndex === -1) {
-    return {
-      artist: normalized,
-      title: normalized,
-      workDate: undefined,
-    }
-  }
-
-  const artist = normalized.slice(0, firstCommaIndex).trim()
-  const rest = normalized.slice(firstCommaIndex + 1).trim()
-  const lastCommaIndex = rest.lastIndexOf(',')
-
-  if (lastCommaIndex === -1) {
-    return {
-      artist,
-      title: rest,
-      workDate: undefined,
-    }
-  }
-
-  return {
-    artist,
-    title: rest.slice(0, lastCommaIndex).trim(),
-    workDate: rest.slice(lastCommaIndex + 1).trim() || undefined,
-  }
-}
-
-function parseArtLinks(markdown: string) {
-  const artworks: ArtworkLink[] = []
-  const sections = markdown.split(/\n(?=##\s+)/g)
-
-  for (const section of sections) {
-    const headingMatch = section.match(/^##\s+(.+)$/m)
-
-    if (!headingMatch || /^##\s+Related\b/i.test(headingMatch[0])) {
-      continue
-    }
-
-    const heading = headingMatch[1].trim()
-    const fields = new Map<string, string>()
-
-    for (const line of section.split('\n')) {
-      const fieldMatch = line.match(/^-\s+([^:]+):\s*(.+)$/)
-
-      if (fieldMatch) {
-        fields.set(fieldMatch[1].trim().toLowerCase(), fieldMatch[2].trim())
-      }
-    }
-
-    const sourceUrl = fields.get('source')
-    const imageUrl = fields.get('image')
-
-    if (!sourceUrl || !imageUrl) {
-      throw new Error(`Artwork section is missing Source or Image: ${heading}`)
-    }
-
-    const parsedHeading = parseHeading(heading)
-
-    artworks.push({
-      ...parsedHeading,
-      alternateImageUrl: fields.get('alternate image') ?? fields.get('alternate commons image') ?? fields.get('higher-resolution alternate image') ?? fields.get('alternate image used in the handout'),
-      alternateSourceUrl: fields.get('alternate source') ?? fields.get('alternate commons source') ?? fields.get('higher-resolution alternate source') ?? fields.get('alternate source used in the handout'),
-      heading,
-      imageUrl,
-      note: fields.get('note'),
-      sourceUrl,
-    })
-  }
-
-  return artworks
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function getExtensionFromUrl(url: string) {
-  try {
-    const pathname = new URL(url).pathname
-    const extension = path.extname(pathname).replace(/^\./, '').toLowerCase()
-
-    if (extension) {
-      return extension === 'jpeg' ? 'jpg' : extension
-    }
-  } catch {
-    return null
-  }
-
-  return null
-}
-
-function getExtensionFromMimeType(mimeType: string) {
-  switch (mimeType.split(';')[0].trim().toLowerCase()) {
-    case 'image/jpeg':
-      return 'jpg'
-    case 'image/png':
-      return 'png'
-    case 'image/gif':
-      return 'gif'
-    case 'image/webp':
-      return 'webp'
-    case 'image/tiff':
-      return 'tif'
-    default:
-      return null
-  }
-}
-
-function getProposedFilename(artwork: ArtworkLink, mimeType: string) {
-  const extension = getExtensionFromUrl(artwork.imageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
-  const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
-
-  return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
-}
-
-function getAltText(artwork: ArtworkLink) {
-  return `${artwork.title} by ${artwork.artist}${artwork.workDate ? `, ${artwork.workDate}` : ''}.`
-}
-
-function getCaption(artwork: ArtworkLink) {
-  return `${artwork.artist}, ${artwork.title}${artwork.workDate ? ` (${artwork.workDate})` : ''}`
-}
-
 async function downloadArtwork(artwork: ArtworkLink): Promise<DownloadedArtwork> {
-  const response = await fetch(artwork.imageUrl, {
-    headers: {
-      'User-Agent': 'my-sunday-school-art-dry-run/1.0',
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`${artwork.imageUrl}: ${response.status} ${response.statusText}`)
-  }
-
-  const mimeType = response.headers.get('content-type')?.split(';')[0] ?? 'application/octet-stream'
-
-  if (!mimeType.startsWith('image/')) {
-    throw new Error(`${artwork.imageUrl}: expected image/* but got ${mimeType}`)
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer())
-  const hash = crypto.createHash('sha256').update(buffer).digest('hex')
+  const resolved = await resolveArtworkImage(artwork)
 
   return {
     ...artwork,
-    buffer,
-    contentLength: buffer.length,
-    hash,
-    mimeType,
-    proposedFilename: getProposedFilename(artwork, mimeType),
+    buffer: resolved.buffer,
+    contentLength: resolved.contentLength,
+    hash: resolved.sha256,
+    imageUrl: artwork.imageUrl,
+    mimeType: resolved.mimeType,
+    proposedFilename: getProposedFilename(artwork, resolved.mimeType, resolved.url),
+    resolvedImageReason: resolved.reason,
+    resolvedImageSize: resolved.dimensions,
+    resolvedImageUrl: resolved.url,
   }
 }
 
@@ -418,6 +254,15 @@ async function main() {
 
       console.log(`  source: ${downloaded.sourceUrl}`)
       console.log(`  image: ${downloaded.imageUrl}`)
+      if (downloaded.resolvedImageUrl && downloaded.resolvedImageUrl !== downloaded.imageUrl) {
+        console.log(`  resolved upload: ${downloaded.resolvedImageUrl}`)
+        console.log(`  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`)
+      }
+
+      if (downloaded.resolvedImageSize) {
+        console.log(`  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`)
+      }
+
       console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}…`)
       console.log(`  proposed filename: ${downloaded.proposedFilename}`)
       console.log(`  alt text: ${getAltText(downloaded)}`)

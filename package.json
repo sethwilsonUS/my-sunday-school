@@ -21,7 +21,8 @@
     "lesson:create-draft": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/create-lesson-draft.ts",
     "lesson:attach-art": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/attach-lesson-art.ts",
     "lesson:preflight": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/lesson-preflight.ts",
-    "lesson:sync": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/lesson-sync.ts"
+    "lesson:sync": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/lesson-sync.ts",
+    "lesson:refresh-art": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/lesson-refresh-art.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.0",
