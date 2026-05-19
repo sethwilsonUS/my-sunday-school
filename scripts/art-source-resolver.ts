@@ -626,10 +626,6 @@ async function resolveHostnameAddresses(
     return options.resolveHostnameFn(hostname)
   }
 
-  if (options.fetchFn !== fetch) {
-    return []
-  }
-
   const addresses = await dnsLookup(hostname, { all: true, verbatim: true })
   return addresses.map((address) => address.address)
 }

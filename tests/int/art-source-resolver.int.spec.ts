@@ -1,7 +1,9 @@
 // @vitest-environment node
 
+import { lookup as dnsLookup } from 'node:dns/promises'
+
 import sharp from 'sharp'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   candidateIsMateriallyBetter,
@@ -12,6 +14,15 @@ import {
   type ImageDimensions,
   type ValidatedArtImageCandidate,
 } from '../../scripts/art-source-resolver'
+
+vi.mock('node:dns/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:dns/promises')>()
+
+  return {
+    ...actual,
+    lookup: vi.fn(actual.lookup),
+  }
+})
 
 const candidate = (
   url: string,
@@ -40,6 +51,11 @@ const imageBuffer = (width: number, height: number) =>
 
 const fetchUrl = (url: Parameters<typeof fetch>[0]) =>
   typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+
+beforeEach(() => {
+  vi.mocked(dnsLookup).mockReset()
+  vi.mocked(dnsLookup).mockResolvedValue([{ address: '203.0.113.10', family: 4 }])
+})
 
 describe('art source resolver', () => {
   it('normalizes Commons file page and Special:Redirect URLs to file titles', () => {
@@ -552,6 +568,28 @@ describe('art source resolver network resolution', () => {
     ).rejects.toThrow('No usable image candidate found')
 
     expect(fetchedUrls).toEqual([])
+  })
+
+  it('resolves hostnames before fetching through a custom fetch function', async () => {
+    vi.mocked(dnsLookup).mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }])
+
+    const fetchedUrls: string[] = []
+    const fetchFn: typeof fetch = async (url) => {
+      fetchedUrls.push(fetchUrl(url))
+      return new Response('should not fetch', { status: 200 })
+    }
+
+    await expect(
+      resolveArtworkImage(
+        {
+          imageUrl: 'https://public.example/private.jpg',
+        },
+        { fetchFn },
+      ),
+    ).rejects.toThrow('No usable image candidate found')
+
+    expect(fetchedUrls).toEqual([])
+    expect(dnsLookup).toHaveBeenCalledWith('public.example', { all: true, verbatim: true })
   })
 
   it('rejects redirects to internal network addresses', async () => {
