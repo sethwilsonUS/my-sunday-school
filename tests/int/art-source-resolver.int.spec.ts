@@ -119,6 +119,7 @@ describe('art source resolver', () => {
     ['image/png', 'png'],
     ['image/avif', 'avif'],
     ['image/gif', 'gif'],
+    ['image/heif', 'heif'],
     ['image/webp', 'webp'],
     ['image/svg+xml', 'svg'],
     ['image/tiff', 'tif'],
@@ -278,6 +279,91 @@ describe('art source resolver network resolution', () => {
         { fetchFn, maxBytes: 10 },
       ),
     ).rejects.toThrow('image exceeds maximum size 10 bytes')
+  })
+
+  it('caps source-page HTML reads and still validates direct candidates', async () => {
+    const image = await imageBuffer(1300, 900)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://museum.example/huge-artwork-page') {
+        return new Response('too much html', {
+          headers: {
+            'content-length': '100',
+            'content-type': 'text/html',
+          },
+          status: 200,
+        })
+      }
+
+      if (href === 'https://example.test/provided.jpg') {
+        return new Response(image, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/provided.jpg',
+        sourceUrl: 'https://museum.example/huge-artwork-page',
+      },
+      { fetchFn, maxSourcePageBytes: 10 },
+    )
+
+    expect(resolved.url).toBe('https://example.test/provided.jpg')
+    expect(resolved.failures.some((failure) => failure.includes('source page exceeds maximum size 10 bytes'))).toBe(
+      true,
+    )
+  })
+
+  it('canonicalizes MIME type from decoded image metadata', async () => {
+    const png = await sharp({
+      create: {
+        background: '#ffffff',
+        channels: 3,
+        height: 100,
+        width: 200,
+      },
+    })
+      .png()
+      .toBuffer()
+    const avif = await sharp({
+      create: {
+        background: '#ffffff',
+        channels: 3,
+        height: 120,
+        width: 240,
+      },
+    })
+      .avif()
+      .toBuffer()
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" />'
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://example.test/misleading.jpg') {
+        return new Response(png, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      if (href === 'https://example.test/extensionless') {
+        return new Response(avif, { headers: { 'content-type': 'application/octet-stream' }, status: 200 })
+      }
+
+      if (href === 'https://example.test/misleading.svg') {
+        return new Response(svg, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const pngResolved = await resolveArtworkImage({ imageUrl: 'https://example.test/misleading.jpg' }, { fetchFn })
+    const avifResolved = await resolveArtworkImage({ imageUrl: 'https://example.test/extensionless' }, { fetchFn })
+    const svgResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/misleading.svg' }, { fetchFn })
+
+    expect(pngResolved.mimeType).toBe('image/png')
+    expect(avifResolved.mimeType).toBe('image/avif')
+    expect(svgResolved.mimeType).toBe('image/svg+xml')
   })
 
   it('derives WGA artwork image URLs from WGA source pages', async () => {

@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 import { extensionFromMimeType } from './art-source-resolver'
 import type { ImageDimensions } from './art-source-resolver'
 
@@ -212,8 +210,8 @@ export function getCaption(artwork: ArtworkLink) {
   return `${artwork.artist}, ${artwork.title}${artwork.workDate ? ` (${artwork.workDate})` : ''}`
 }
 
-export function getProposedFilename(artwork: ArtworkLink, mimeType: string, resolvedImageUrl = artwork.imageUrl) {
-  const extension = getExtensionFromUrl(resolvedImageUrl) ?? extensionFromMimeType(mimeType)
+export function getProposedFilename(artwork: ArtworkLink, mimeType: string, _resolvedImageUrl = artwork.imageUrl) {
+  const extension = extensionFromMimeType(mimeType)
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
@@ -263,18 +261,4 @@ function parseHeading(heading: string) {
     title: rest.slice(0, lastCommaIndex).trim(),
     workDate: rest.slice(lastCommaIndex + 1).trim() || undefined,
   }
-}
-
-function getExtensionFromUrl(url: string) {
-  try {
-    const extension = path.extname(new URL(url).pathname).replace(/^\./, '').toLowerCase()
-
-    if (extension) {
-      return extension === 'jpeg' ? 'jpg' : extension
-    }
-  } catch {
-    return null
-  }
-
-  return null
 }

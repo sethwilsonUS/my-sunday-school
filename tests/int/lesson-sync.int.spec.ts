@@ -102,7 +102,7 @@ describe('lesson sync planning', () => {
 })
 
 describe('lesson sync artwork filenames', () => {
-  it('can derive the media filename extension from the resolved upload URL', () => {
+  it('uses the resolved MIME type instead of a misleading upload URL extension', () => {
     const [artwork] = parseArtLinks(
       [
         '## Gustave Dore, *The Creation of Light*, 1866',
@@ -112,8 +112,8 @@ describe('lesson sync artwork filenames', () => {
       ].join('\n'),
     )
 
-    expect(getProposedFilename(artwork, 'image/png', 'https://upload.wikimedia.org/original.png')).toBe(
-      'gustave-dore-the-creation-of-light-1866.png',
+    expect(getProposedFilename(artwork, 'image/jpeg', 'https://upload.wikimedia.org/original.png')).toBe(
+      'gustave-dore-the-creation-of-light-1866.jpg',
     )
   })
 

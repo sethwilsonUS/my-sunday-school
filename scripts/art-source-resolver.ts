@@ -97,6 +97,8 @@ export function extensionFromMimeType(mimeType: string) {
       return 'svg'
     case 'image/gif':
       return 'gif'
+    case 'image/heif':
+      return 'heif'
     case 'image/webp':
       return 'webp'
     case 'image/tiff':
@@ -127,6 +129,7 @@ export type ResolveArtworkImageOptions = {
   fetchFn?: typeof fetch
   maxBytes?: number
   maxPixels?: number
+  maxSourcePageBytes?: number
   timeoutMs?: number
 }
 
@@ -137,6 +140,7 @@ type CandidateHint = {
 
 const DEFAULT_MAX_IMAGE_BYTES = 60_000_000
 const DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
+const DEFAULT_MAX_SOURCE_PAGE_BYTES = 2_000_000
 
 export async function resolveArtworkImage(
   input: ArtworkResolverInput,
@@ -384,11 +388,15 @@ async function fetchSourcePageImage(
     return null
   })
 
-  if (!response?.ok || !response.headers.get('content-type')?.includes('text/html')) {
+  if (!response?.ok || !response.headers.get('content-type')?.toLowerCase().includes('text/html')) {
     return undefined
   }
 
-  const html = await response.text().catch((error: unknown) => {
+  const html = await readResponseText(
+    response,
+    options.maxSourcePageBytes ?? DEFAULT_MAX_SOURCE_PAGE_BYTES,
+    'source page',
+  ).catch((error: unknown) => {
     failures.push(`${sourceUrl}: source page read failed: ${error instanceof Error ? error.message : String(error)}`)
     return undefined
   })
@@ -429,14 +437,15 @@ async function validateCandidate(
     throw new Error(`${response.status} ${response.statusText}`)
   }
 
-  const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() || 'application/octet-stream'
+  const headerMimeType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()
 
-  if (!mimeType.startsWith('image/')) {
-    throw new Error(`expected image/* but got ${mimeType}`)
+  if (headerMimeType && !headerMimeType.startsWith('image/') && headerMimeType !== 'application/octet-stream') {
+    throw new Error(`expected image/* but got ${headerMimeType}`)
   }
 
   const buffer = await readResponseBuffer(response, options.maxBytes ?? DEFAULT_MAX_IMAGE_BYTES)
   const metadata = await sharp(buffer, { limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS }).metadata()
+  const mimeType = mimeTypeFromSharpMetadata(metadata.format, metadata.compression) ?? headerMimeType ?? 'image/jpeg'
 
   if (!metadata.width || !metadata.height) {
     throw new Error('image dimensions could not be read')
@@ -462,18 +471,18 @@ function fetchWithResolverHeaders(
   })
 }
 
-async function readResponseBuffer(response: Response, maxBytes: number) {
+async function readResponseBuffer(response: Response, maxBytes: number, label = 'image') {
   const contentLength = Number(response.headers.get('content-length'))
 
   if (Number.isFinite(contentLength) && contentLength > maxBytes) {
-    throw new Error(`image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+    throw new Error(`${label} exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
   }
 
   if (!response.body) {
     const buffer = Buffer.from(await response.arrayBuffer())
 
     if (buffer.length > maxBytes) {
-      throw new Error(`image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+      throw new Error(`${label} exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
     }
 
     return buffer
@@ -498,13 +507,38 @@ async function readResponseBuffer(response: Response, maxBytes: number) {
 
     if (receivedBytes > maxBytes) {
       await reader.cancel().catch(() => undefined)
-      throw new Error(`image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+      throw new Error(`${label} exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
     }
 
     chunks.push(Buffer.from(value))
   }
 
   return Buffer.concat(chunks, receivedBytes)
+}
+
+async function readResponseText(response: Response, maxBytes: number, label: string) {
+  return (await readResponseBuffer(response, maxBytes, label)).toString('utf8')
+}
+
+function mimeTypeFromSharpMetadata(format: string | undefined, compression: string | undefined) {
+  switch (format) {
+    case 'gif':
+      return 'image/gif'
+    case 'heif':
+      return compression === 'av1' ? 'image/avif' : 'image/heif'
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'tiff':
+      return 'image/tiff'
+    case 'webp':
+      return 'image/webp'
+    default:
+      return undefined
+  }
 }
 
 function resolverHeaders() {

@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 import dotenv from 'dotenv'
 import { getPayload, type Payload } from 'payload'
 
@@ -208,27 +206,12 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
-function getExtensionFromUrl(url: string) {
-  try {
-    const pathname = new URL(url).pathname
-    const extension = path.extname(pathname).replace(/^\./, '').toLowerCase()
-
-    if (extension) {
-      return extension === 'jpeg' ? 'jpg' : extension
-    }
-  } catch {
-    return null
-  }
-
-  return null
-}
-
 function getProposedFilename(
   artwork: ArtworkLink,
   mimeType: string,
-  resolvedImageUrl = artwork.imageUrl,
+  _resolvedImageUrl = artwork.imageUrl,
 ) {
-  const extension = getExtensionFromUrl(resolvedImageUrl) ?? extensionFromMimeType(mimeType)
+  const extension = extensionFromMimeType(mimeType)
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
