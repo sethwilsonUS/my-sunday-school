@@ -244,7 +244,7 @@ export default async function LessonPage({ params }: PageProps) {
             artworks.map((artwork) => {
               const media = getMedia(artwork.image)
               const mediaSource = getMediaImageSource(media, ['card', 'large'])
-              const lightboxSource = getMediaImageSource(media, ['large', 'card'])
+              const lightboxSource = getMediaImageSource(media, ['original', 'large', 'card'])
 
               return (
                 <ArtworkCard

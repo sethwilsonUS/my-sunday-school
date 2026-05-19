@@ -1121,16 +1121,18 @@ blockquote footer {
 }
 
 .artwork-lightbox {
-  width: fit-content;
-  max-width: calc(100vw - 1rem);
-  max-height: calc(100dvh - 1rem);
-  margin: auto;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 98%, transparent);
-  padding: 0;
-  overflow: visible;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  overflow: hidden;
   color: var(--foreground);
-  box-shadow: 0 40px 120px rgb(0 0 0 / 0.4);
 }
 
 .artwork-lightbox::backdrop {
@@ -1141,9 +1143,9 @@ blockquote footer {
 .artwork-lightbox__frame {
   position: relative;
   display: grid;
-  width: fit-content;
-  max-width: calc(100vw - 1rem);
-  padding: 0.55rem;
+  width: 100%;
+  height: 100%;
+  place-items: center;
 }
 
 .artwork-lightbox__close {
@@ -1172,31 +1174,25 @@ blockquote footer {
 }
 
 .artwork-lightbox__image-shell {
-  display: grid;
-  width: fit-content;
-  max-width: min(calc(100vw - 3rem), 1200px);
-  max-height: calc(100dvh - 3rem);
-  justify-self: center;
-  align-self: center;
-  place-items: center;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-strong) 92%, transparent),
-      var(--surface)
-    ),
-    linear-gradient(135deg, rgb(139 26 26 / 0.07), rgb(31 111 80 / 0.04));
-  overflow: hidden;
-  padding: clamp(0.75rem, 2vw, 1.2rem);
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: visible;
 }
 
 .artwork-lightbox__image {
   display: block;
-  max-width: min(calc(100vw - 5rem), 1200px);
-  max-height: calc(100dvh - 5rem);
-  width: auto;
-  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 40px 80px rgb(0 0 0 / 0.4));
 }
 
 .not-found-panel {
@@ -1311,11 +1307,7 @@ blockquote footer {
   }
 
   .artwork-lightbox {
-    max-width: calc(100vw - 0.5rem);
-  }
-
-  .artwork-lightbox__frame {
-    padding: 0.4rem;
+    padding: 0.5rem;
   }
 
   .artwork-lightbox__close {
@@ -1323,16 +1315,6 @@ blockquote footer {
     right: 0.75rem;
   }
 
-  .artwork-lightbox__image-shell {
-    max-width: calc(100vw - 1.6rem);
-    max-height: calc(100dvh - 1.6rem);
-    padding: 0.45rem;
-  }
-
-  .artwork-lightbox__image {
-    max-width: calc(100vw - 2.5rem);
-    max-height: calc(100dvh - 2.5rem);
-  }
 }
 
 @media print {

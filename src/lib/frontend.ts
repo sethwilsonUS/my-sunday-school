@@ -1,6 +1,6 @@
 import type { Media } from '@/payload-types'
 
-export type MediaImageSize = 'thumbnail' | 'card' | 'large'
+export type MediaImageSize = 'thumbnail' | 'card' | 'large' | 'original'
 
 export type MediaImageSource = {
   height?: number | null
@@ -40,6 +40,18 @@ export const getMediaImageSource = (
   }
 
   for (const sizeName of preferredSizes) {
+    if (sizeName === 'original') {
+      if (resolved.url) {
+        return {
+          height: resolved.height,
+          src: resolved.url,
+          width: resolved.width,
+        }
+      }
+
+      continue
+    }
+
     const size = resolved.sizes?.[sizeName]
 
     if (size?.url) {
