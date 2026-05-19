@@ -35,6 +35,16 @@ describe('lesson refresh art helpers', () => {
       published: true,
       write: false,
     })
+
+    expect(parseRefreshArtArgs(['--ids', '122,123,126'])).toMatchObject({
+      ids: [122, 123, 126],
+      write: false,
+    })
+  })
+
+  it('rejects empty id entries', () => {
+    expect(() => parseRefreshArtArgs(['--ids', '1,,2'])).toThrow('--ids must be a positive integer.')
+    expect(() => parseRefreshArtArgs(['--ids', ','])).toThrow('--ids must be a positive integer.')
   })
 
   it('requires confirmation for write mode and a bounded scope', () => {

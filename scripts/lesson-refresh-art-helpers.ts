@@ -82,7 +82,6 @@ export function parseRefreshArtArgs(args: string[]): RefreshArtOptions {
         options.ids = readValue()
           .split(',')
           .map((id) => id.trim())
-          .filter(Boolean)
           .map((id) => parsePositiveInteger(id, '--ids'))
         break
       case '--limit':
