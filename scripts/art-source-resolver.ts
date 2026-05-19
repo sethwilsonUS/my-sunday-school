@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 export type ImageDimensions = {
   height: number
   width: number
@@ -91,6 +89,6 @@ export function extensionFromMimeType(mimeType: string) {
     case 'image/tiff':
       return 'tif'
     default:
-      return path.extname(mimeType).replace(/^\./, '') || 'jpg'
+      return 'jpg'
   }
 }

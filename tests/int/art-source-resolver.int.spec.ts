@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   candidateIsMateriallyBetter,
   chooseBestValidatedCandidate,
+  extensionFromMimeType,
   normalizeCommonsFileTitle,
   type ImageDimensions,
   type ValidatedArtImageCandidate,
@@ -87,5 +88,17 @@ describe('art source resolver', () => {
         { width: 1280, height: 960 },
       ),
     ).toBe(false)
+  })
+
+  it.each([
+    ['image/jpeg', 'jpg'],
+    ['image/png', 'png'],
+    ['image/gif', 'gif'],
+    ['image/webp', 'webp'],
+    ['image/tiff', 'tif'],
+    ['IMAGE/JPEG; charset=binary', 'jpg'],
+    ['application/x-custom.png', 'jpg'],
+  ])('maps %s to the %s extension', (mimeType, extension) => {
+    expect(extensionFromMimeType(mimeType)).toBe(extension)
   })
 })
