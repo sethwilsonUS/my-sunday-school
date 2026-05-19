@@ -117,8 +117,10 @@ describe('art source resolver', () => {
   it.each([
     ['image/jpeg', 'jpg'],
     ['image/png', 'png'],
+    ['image/avif', 'avif'],
     ['image/gif', 'gif'],
     ['image/webp', 'webp'],
+    ['image/svg+xml', 'svg'],
     ['image/tiff', 'tif'],
     ['IMAGE/JPEG; charset=binary', 'jpg'],
     ['application/x-custom.png', 'jpg'],
@@ -131,10 +133,12 @@ describe('art source resolver network resolution', () => {
   it('uses Commons API imageinfo when a Commons source page is provided', async () => {
     const original = await imageBuffer(1600, 1200)
     const direct = await imageBuffer(700, 900)
-    const fetchFn: typeof fetch = async (url) => {
+    let commonsRequestHadSignal = false
+    const fetchFn: typeof fetch = async (url, init) => {
       const href = fetchUrl(url)
 
       if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
+        commonsRequestHadSignal = Boolean(init?.signal)
         return new Response(
           JSON.stringify({
             query: {
@@ -182,6 +186,7 @@ describe('art source resolver network resolution', () => {
     expect(resolved.dimensions).toEqual({ width: 1600, height: 1200 })
     expect(resolved.providedImageUrl).toBe('https://example.test/direct.jpg')
     expect(resolved.changedFromProvided).toBe(true)
+    expect(commonsRequestHadSignal).toBe(true)
   })
 
   it('falls back to source-page og:image metadata when the source is not Commons', async () => {
@@ -217,6 +222,62 @@ describe('art source resolver network resolution', () => {
     expect(resolved.dimensions).toEqual({ width: 1400, height: 1000 })
     expect(resolved.changedFromProvided).toBe(false)
     expect(resolved.sha256).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('keeps valid direct candidates ahead of larger source-page metadata candidates', async () => {
+    const direct = await imageBuffer(800, 800)
+    const metadata = await imageBuffer(2400, 2400)
+    const fetchFn: typeof fetch = async (url) => {
+      const href = fetchUrl(url)
+
+      if (href === 'https://museum.example/artwork') {
+        return new Response('<meta property="og:image" content="/social-card.jpg">', {
+          headers: { 'content-type': 'text/html' },
+          status: 200,
+        })
+      }
+
+      if (href === 'https://example.test/direct.jpg') {
+        return new Response(direct, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      if (href === 'https://museum.example/social-card.jpg') {
+        return new Response(metadata, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+      }
+
+      return new Response('missing', { status: 404 })
+    }
+
+    const resolved = await resolveArtworkImage(
+      {
+        imageUrl: 'https://example.test/direct.jpg',
+        sourceUrl: 'https://museum.example/artwork',
+        title: 'Museum Work',
+      },
+      { fetchFn },
+    )
+
+    expect(resolved.url).toBe('https://example.test/direct.jpg')
+  })
+
+  it('rejects oversized image candidates before buffering them', async () => {
+    const fetchFn: typeof fetch = async () =>
+      new Response('oversized', {
+        headers: {
+          'content-length': '100',
+          'content-type': 'image/jpeg',
+        },
+        status: 200,
+      })
+
+    await expect(
+      resolveArtworkImage(
+        {
+          imageUrl: 'https://example.test/oversized.jpg',
+        },
+        { fetchFn, maxBytes: 10 },
+      ),
+    ).rejects.toThrow('image exceeds maximum size 10 bytes')
   })
 
   it('derives WGA artwork image URLs from WGA source pages', async () => {

@@ -87,10 +87,14 @@ export function chooseBestValidatedCandidate(candidates: ValidatedArtImageCandid
 
 export function extensionFromMimeType(mimeType: string) {
   switch (mimeType.split(';')[0].trim().toLowerCase()) {
+    case 'image/avif':
+      return 'avif'
     case 'image/jpeg':
       return 'jpg'
     case 'image/png':
       return 'png'
+    case 'image/svg+xml':
+      return 'svg'
     case 'image/gif':
       return 'gif'
     case 'image/webp':
@@ -121,6 +125,8 @@ export type ResolvedArtworkImage = ValidatedArtImageCandidate & {
 
 export type ResolveArtworkImageOptions = {
   fetchFn?: typeof fetch
+  maxBytes?: number
+  maxPixels?: number
   timeoutMs?: number
 }
 
@@ -129,13 +135,16 @@ type CandidateHint = {
   url: string
 }
 
+const DEFAULT_MAX_IMAGE_BYTES = 60_000_000
+const DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
+
 export async function resolveArtworkImage(
   input: ArtworkResolverInput,
   options: ResolveArtworkImageOptions = {},
 ): Promise<ResolvedArtworkImage> {
   const fetchFn = options.fetchFn ?? fetch
   const failures: string[] = []
-  const candidates = await collectCandidateHints(input, fetchFn, failures)
+  const candidates = await collectCandidateHints(input, { ...options, fetchFn }, failures)
   const validated: ValidatedArtImageCandidate[] = []
 
   for (const candidate of uniqueCandidateHints(candidates)) {
@@ -150,7 +159,7 @@ export async function resolveArtworkImage(
     }
   }
 
-  const chosen = chooseBestValidatedCandidate(validated)
+  const chosen = choosePreferredCandidate(validated)
   const providedImageUrl = input.imageUrl?.trim() || undefined
 
   if (!chosen) {
@@ -166,7 +175,11 @@ export async function resolveArtworkImage(
   }
 }
 
-async function collectCandidateHints(input: ArtworkResolverInput, fetchFn: typeof fetch, failures: string[]) {
+async function collectCandidateHints(
+  input: ArtworkResolverInput,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+  failures: string[],
+) {
   const candidates: CandidateHint[] = []
 
   addCandidate(candidates, input.imageUrl, 'provided image URL')
@@ -178,7 +191,7 @@ async function collectCandidateHints(input: ArtworkResolverInput, fetchFn: typeo
     const fileTitle = normalizeCommonsFileTitle(sourceUrl ?? undefined)
 
     if (fileTitle) {
-      const commonsUrl = await fetchCommonsOriginal(fileTitle, fetchFn, failures)
+      const commonsUrl = await fetchCommonsOriginal(fileTitle, options, failures)
       addCandidate(candidates, commonsUrl, `Commons API original for ${fileTitle}`)
     }
   }
@@ -186,7 +199,7 @@ async function collectCandidateHints(input: ArtworkResolverInput, fetchFn: typeo
   for (const sourceUrl of [input.sourceUrl, input.alternateSourceUrl]) {
     addCandidate(candidates, getWgaImageUrl(sourceUrl ?? undefined), `WGA artwork image for ${sourceUrl}`)
 
-    const metadataImage = await fetchSourcePageImage(sourceUrl ?? undefined, fetchFn, failures)
+    const metadataImage = await fetchSourcePageImage(sourceUrl ?? undefined, options, failures)
     addCandidate(candidates, metadataImage, `source-page metadata for ${sourceUrl}`)
   }
 
@@ -214,6 +227,12 @@ function uniqueCandidateHints(candidates: CandidateHint[]) {
     seen.add(key)
     return true
   })
+}
+
+function choosePreferredCandidate(candidates: ValidatedArtImageCandidate[]) {
+  const primaryCandidates = candidates.filter((candidate) => !candidate.reason.startsWith('source-page metadata'))
+
+  return chooseBestValidatedCandidate(primaryCandidates.length > 0 ? primaryCandidates : candidates)
 }
 
 function getDirectImageUrl(value: string | undefined) {
@@ -275,7 +294,11 @@ function getWgaImageUrl(sourceUrl: string | undefined) {
   }
 }
 
-async function fetchCommonsOriginal(fileTitle: string, fetchFn: typeof fetch, failures: string[]) {
+async function fetchCommonsOriginal(
+  fileTitle: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+  failures: string[],
+) {
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
@@ -284,7 +307,7 @@ async function fetchCommonsOriginal(fileTitle: string, fetchFn: typeof fetch, fa
     titles: `File:${fileTitle}`,
   })
   const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`
-  const response = await fetchFn(url, { headers: resolverHeaders() }).catch((error: unknown) => {
+  const response = await fetchWithResolverHeaders(url, options).catch((error: unknown) => {
     failures.push(`${url}: ${error instanceof Error ? error.message : String(error)}`)
     return null
   })
@@ -347,12 +370,16 @@ async function fetchCommonsOriginal(fileTitle: string, fetchFn: typeof fetch, fa
   return undefined
 }
 
-async function fetchSourcePageImage(sourceUrl: string | undefined, fetchFn: typeof fetch, failures: string[]) {
+async function fetchSourcePageImage(
+  sourceUrl: string | undefined,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+  failures: string[],
+) {
   if (!sourceUrl || normalizeCommonsFileTitle(sourceUrl)) {
     return undefined
   }
 
-  const response = await fetchFn(sourceUrl, { headers: resolverHeaders() }).catch((error: unknown) => {
+  const response = await fetchWithResolverHeaders(sourceUrl, options).catch((error: unknown) => {
     failures.push(`${sourceUrl}: ${error instanceof Error ? error.message : String(error)}`)
     return null
   })
@@ -396,10 +423,7 @@ async function validateCandidate(
   candidate: CandidateHint,
   options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
 ): Promise<ValidatedArtImageCandidate> {
-  const response = await options.fetchFn(candidate.url, {
-    headers: resolverHeaders(),
-    signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
-  })
+  const response = await fetchWithResolverHeaders(candidate.url, options)
 
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`)
@@ -411,8 +435,8 @@ async function validateCandidate(
     throw new Error(`expected image/* but got ${mimeType}`)
   }
 
-  const buffer = Buffer.from(await response.arrayBuffer())
-  const metadata = await sharp(buffer).metadata()
+  const buffer = await readResponseBuffer(response, options.maxBytes ?? DEFAULT_MAX_IMAGE_BYTES)
+  const metadata = await sharp(buffer, { limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS }).metadata()
 
   if (!metadata.width || !metadata.height) {
     throw new Error('image dimensions could not be read')
@@ -426,6 +450,61 @@ async function validateCandidate(
     reason: candidate.reason,
     url: candidate.url,
   }
+}
+
+function fetchWithResolverHeaders(
+  url: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+) {
+  return options.fetchFn(url, {
+    headers: resolverHeaders(),
+    signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
+  })
+}
+
+async function readResponseBuffer(response: Response, maxBytes: number) {
+  const contentLength = Number(response.headers.get('content-length'))
+
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new Error(`image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+  }
+
+  if (!response.body) {
+    const buffer = Buffer.from(await response.arrayBuffer())
+
+    if (buffer.length > maxBytes) {
+      throw new Error(`image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+    }
+
+    return buffer
+  }
+
+  const reader = response.body.getReader()
+  const chunks: Buffer[] = []
+  let receivedBytes = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+
+    if (done) {
+      break
+    }
+
+    if (!value) {
+      continue
+    }
+
+    receivedBytes += value.byteLength
+
+    if (receivedBytes > maxBytes) {
+      await reader.cancel().catch(() => undefined)
+      throw new Error(`image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+    }
+
+    chunks.push(Buffer.from(value))
+  }
+
+  return Buffer.concat(chunks, receivedBytes)
 }
 
 function resolverHeaders() {
