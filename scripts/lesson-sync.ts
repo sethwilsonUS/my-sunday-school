@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
 import dotenv from 'dotenv'
@@ -6,6 +5,7 @@ import { getPayload, type Payload } from 'payload'
 
 import { SEASON_OPTIONS } from '../src/lib/liturgical-themes'
 import type { Lesson, Media } from '../src/payload-types'
+import { resolveArtworkImage } from './art-source-resolver'
 import {
   buildLessonSyncData,
   chooseLessonSyncTarget,
@@ -180,32 +180,19 @@ function optionsToSyncInput(options: Options): LessonSyncInput {
 }
 
 async function downloadArtwork(artwork: ArtworkLink): Promise<DownloadedArtwork> {
-  const response = await fetch(artwork.imageUrl, {
-    headers: {
-      'User-Agent': 'my-sunday-school-lesson-sync/1.0',
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`${artwork.imageUrl}: ${response.status} ${response.statusText}`)
-  }
-
-  const mimeType = response.headers.get('content-type')?.split(';')[0] ?? 'application/octet-stream'
-
-  if (!mimeType.startsWith('image/')) {
-    throw new Error(`${artwork.imageUrl}: expected image/* but got ${mimeType}`)
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer())
-  const hash = crypto.createHash('sha256').update(buffer).digest('hex')
+  const resolved = await resolveArtworkImage(artwork)
 
   return {
     ...artwork,
-    buffer,
-    contentLength: buffer.length,
-    hash,
-    mimeType,
-    proposedFilename: getProposedFilename(artwork, mimeType),
+    buffer: resolved.buffer,
+    contentLength: resolved.contentLength,
+    hash: resolved.sha256,
+    imageUrl: artwork.imageUrl,
+    mimeType: resolved.mimeType,
+    proposedFilename: getProposedFilename(artwork, resolved.mimeType, resolved.url),
+    resolvedImageUrl: resolved.url,
+    resolvedImageReason: resolved.reason,
+    resolvedImageSize: resolved.dimensions,
   }
 }
 
@@ -349,6 +336,15 @@ async function syncArtwork({
 
     console.log(`  source: ${downloaded.sourceUrl}`)
     console.log(`  image: ${downloaded.imageUrl}`)
+    if (downloaded.resolvedImageUrl && downloaded.resolvedImageUrl !== downloaded.imageUrl) {
+      console.log(`  resolved upload: ${downloaded.resolvedImageUrl}`)
+      console.log(`  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`)
+    }
+
+    if (downloaded.resolvedImageSize) {
+      console.log(`  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`)
+    }
+
     console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}`)
     console.log(`  proposed filename: ${downloaded.proposedFilename}`)
     console.log(`  alt text: ${getAltText(downloaded)}`)

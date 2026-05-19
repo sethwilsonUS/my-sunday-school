@@ -1,5 +1,7 @@
 import path from 'node:path'
 
+import type { ImageDimensions } from './art-source-resolver'
+
 export type LessonSyncInput = {
   collect?: string
   date: string
@@ -60,6 +62,9 @@ export type DownloadedArtwork = ArtworkLink & {
   hash: string
   mimeType: string
   proposedFilename: string
+  resolvedImageReason?: string
+  resolvedImageSize?: ImageDimensions
+  resolvedImageUrl?: string
 }
 
 export function normalizeSourceLectionaryUrl(value: string | undefined) {
@@ -206,8 +211,8 @@ export function getCaption(artwork: ArtworkLink) {
   return `${artwork.artist}, ${artwork.title}${artwork.workDate ? ` (${artwork.workDate})` : ''}`
 }
 
-export function getProposedFilename(artwork: ArtworkLink, mimeType: string) {
-  const extension = getExtensionFromUrl(artwork.imageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
+export function getProposedFilename(artwork: ArtworkLink, mimeType: string, resolvedImageUrl = artwork.imageUrl) {
+  const extension = getExtensionFromUrl(resolvedImageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`

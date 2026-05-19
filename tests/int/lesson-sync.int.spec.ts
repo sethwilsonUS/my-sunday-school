@@ -6,6 +6,7 @@ import {
   buildLessonSyncData,
   chooseLessonSyncTarget,
   getAltText,
+  getProposedFilename,
   normalizeSourceLectionaryUrl,
   parseArtLinks,
   type ExistingLessonForSync,
@@ -97,5 +98,38 @@ describe('lesson sync planning', () => {
     )
 
     expect(getAltText(artwork)).toBe('Paul stands before a group of listeners in Athens.')
+  })
+})
+
+describe('lesson sync artwork filenames', () => {
+  it('can derive the media filename extension from the resolved upload URL', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Gustave Dore, *The Creation of Light*, 1866',
+        '',
+        '- Source: https://commons.wikimedia.org/wiki/File:Creation_of_Light.png',
+        '- Image: https://example.test/preview.jpg',
+      ].join('\n'),
+    )
+
+    expect(getProposedFilename(artwork, 'image/png', 'https://upload.wikimedia.org/original.png')).toBe(
+      'gustave-dore-the-creation-of-light-1866.png',
+    )
+  })
+
+  it('parses higher-resolution alternate art-link fields for resolver input', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Artist, *Work*, 1900',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/small.jpg',
+        '- Higher-resolution alternate image: https://example.test/large.jpg',
+        '- Higher-resolution alternate source: https://example.test/large-source',
+      ].join('\n'),
+    )
+
+    expect(artwork.alternateImageUrl).toBe('https://example.test/large.jpg')
+    expect(artwork.alternateSourceUrl).toBe('https://example.test/large-source')
   })
 })

@@ -1,10 +1,10 @@
-import crypto from 'node:crypto'
 import path from 'node:path'
 
 import dotenv from 'dotenv'
 import { getPayload, type Payload } from 'payload'
 
 import type { Lesson, Media } from '../src/payload-types'
+import { resolveArtworkImage, type ImageDimensions } from './art-source-resolver'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -38,6 +38,9 @@ type DownloadedArtwork = ArtworkLink & {
   hash: string
   mimeType: string
   proposedFilename: string
+  resolvedImageReason?: string
+  resolvedImageSize?: ImageDimensions
+  resolvedImageUrl?: string
 }
 
 type MediaMatch = {
@@ -237,8 +240,12 @@ function getExtensionFromMimeType(mimeType: string) {
   }
 }
 
-function getProposedFilename(artwork: ArtworkLink, mimeType: string) {
-  const extension = getExtensionFromUrl(artwork.imageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
+function getProposedFilename(
+  artwork: ArtworkLink,
+  mimeType: string,
+  resolvedImageUrl = artwork.imageUrl,
+) {
+  const extension = getExtensionFromUrl(resolvedImageUrl) ?? getExtensionFromMimeType(mimeType) ?? 'jpg'
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
@@ -253,32 +260,19 @@ function getCaption(artwork: ArtworkLink) {
 }
 
 async function downloadArtwork(artwork: ArtworkLink): Promise<DownloadedArtwork> {
-  const response = await fetch(artwork.imageUrl, {
-    headers: {
-      'User-Agent': 'my-sunday-school-art-dry-run/1.0',
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`${artwork.imageUrl}: ${response.status} ${response.statusText}`)
-  }
-
-  const mimeType = response.headers.get('content-type')?.split(';')[0] ?? 'application/octet-stream'
-
-  if (!mimeType.startsWith('image/')) {
-    throw new Error(`${artwork.imageUrl}: expected image/* but got ${mimeType}`)
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer())
-  const hash = crypto.createHash('sha256').update(buffer).digest('hex')
+  const resolved = await resolveArtworkImage(artwork)
 
   return {
     ...artwork,
-    buffer,
-    contentLength: buffer.length,
-    hash,
-    mimeType,
-    proposedFilename: getProposedFilename(artwork, mimeType),
+    buffer: resolved.buffer,
+    contentLength: resolved.contentLength,
+    hash: resolved.sha256,
+    imageUrl: artwork.imageUrl,
+    mimeType: resolved.mimeType,
+    proposedFilename: getProposedFilename(artwork, resolved.mimeType, resolved.url),
+    resolvedImageReason: resolved.reason,
+    resolvedImageSize: resolved.dimensions,
+    resolvedImageUrl: resolved.url,
   }
 }
 
@@ -418,6 +412,15 @@ async function main() {
 
       console.log(`  source: ${downloaded.sourceUrl}`)
       console.log(`  image: ${downloaded.imageUrl}`)
+      if (downloaded.resolvedImageUrl && downloaded.resolvedImageUrl !== downloaded.imageUrl) {
+        console.log(`  resolved upload: ${downloaded.resolvedImageUrl}`)
+        console.log(`  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`)
+      }
+
+      if (downloaded.resolvedImageSize) {
+        console.log(`  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`)
+      }
+
       console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}…`)
       console.log(`  proposed filename: ${downloaded.proposedFilename}`)
       console.log(`  alt text: ${getAltText(downloaded)}`)
