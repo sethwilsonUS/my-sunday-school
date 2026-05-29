@@ -7,6 +7,7 @@ import {
   getAltText,
   getCaption,
   getProposedFilename,
+  mergeArtworkRowCaption,
   parseArtLinks,
   type ArtworkLink,
   type DownloadedArtwork,
@@ -174,24 +175,13 @@ async function findExistingMedia(payload: Payload, artwork: DownloadedArtwork): 
   return null
 }
 
-function getArtworkImageId(artwork: NonNullable<Lesson['artworks']>[number]) {
-  if (typeof artwork.image === 'number') {
-    return artwork.image
-  }
-
-  return artwork.image.id
-}
-
-function artworkRowsHaveMedia(rows: NonNullable<Lesson['artworks']>, mediaId: number) {
-  return rows.some((artwork) => getArtworkImageId(artwork) === mediaId)
-}
-
 async function createMedia(payload: Payload, artwork: DownloadedArtwork) {
   return payload.create({
     collection: 'media',
     data: {
       altText: getAltText(artwork),
       artist: artwork.artist,
+      medium: artwork.medium,
       workDate: artwork.workDate,
       wikimediaUrl: artwork.sourceUrl,
     },
@@ -242,6 +232,7 @@ async function main() {
     let mediaRecordsPlanned = 0
     let lessonArtworkRowsAdded = 0
     let lessonArtworkRowsPlanned = 0
+    let lessonArtworkRowsUpdated = 0
 
     if (options.replaceExistingArt) {
       console.log(`Replacement mode: existing attached artwork rows will be replaced with ${artworks.length} row(s) from the art-links file.\n`)
@@ -266,7 +257,8 @@ async function main() {
       console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}…`)
       console.log(`  proposed filename: ${downloaded.proposedFilename}`)
       console.log(`  alt text: ${getAltText(downloaded)}`)
-      console.log(`  caption: ${getCaption(downloaded)}`)
+      const caption = getCaption(downloaded)
+      console.log(`  caption: ${caption}`)
 
       let mediaId: number | null = null
 
@@ -283,13 +275,24 @@ async function main() {
         console.log('  media: would upload new media record')
       }
 
-      if (mediaId && artworkRowsHaveMedia(attachmentRows, mediaId)) {
-        console.log('  lesson: already queued in target artwork rows; skipped duplicate')
-      } else if (mediaId) {
-        lessonArtworkRowsAdded += options.write ? 1 : 0
-        lessonArtworkRowsPlanned += options.write ? 0 : 1
-        attachmentRows.push({ image: mediaId, caption: getCaption(downloaded) })
-        console.log(options.write ? '  lesson: queued target artwork row' : '  lesson: would include existing/created media in target artwork rows')
+      if (mediaId) {
+        const rowChange = mergeArtworkRowCaption(
+          attachmentRows,
+          mediaId,
+          caption,
+          (image, rowCaption) => ({ image, caption: rowCaption }),
+        )
+
+        if (rowChange === 'added') {
+          lessonArtworkRowsAdded += options.write ? 1 : 0
+          lessonArtworkRowsPlanned += options.write ? 0 : 1
+          console.log(options.write ? '  lesson: queued target artwork row' : '  lesson: would include existing/created media in target artwork rows')
+        } else if (rowChange === 'updated') {
+          lessonArtworkRowsUpdated += 1
+          console.log(options.write ? '  lesson: updated existing artwork caption' : '  lesson: would update existing artwork caption')
+        } else {
+          console.log('  lesson: already queued in target artwork rows with current caption')
+        }
       } else {
         lessonArtworkRowsPlanned += 1
         console.log('  lesson: would include newly uploaded media in target artwork rows')
@@ -313,11 +316,13 @@ async function main() {
     if (options.write) {
       console.log(`Created new media records: ${mediaRecordsCreated}`)
       console.log(`Added lesson artwork rows: ${lessonArtworkRowsAdded}`)
+      console.log(`Updated lesson artwork captions: ${lessonArtworkRowsUpdated}`)
       console.log(`Final lesson artwork rows: ${attachmentRows.length}`)
       console.log('Payload writes were made.')
     } else {
       console.log(`Would upload new media records: ${mediaRecordsPlanned}`)
       console.log(`Would add lesson artwork rows: ${lessonArtworkRowsPlanned}`)
+      console.log(`Would update lesson artwork captions: ${lessonArtworkRowsUpdated}`)
       console.log(`Would set final lesson artwork rows to: ${attachmentRows.length + mediaRecordsPlanned}`)
       console.log('No Payload writes were made.')
     }

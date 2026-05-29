@@ -6,10 +6,13 @@ import {
   buildLessonSyncData,
   chooseLessonSyncTarget,
   getAltText,
+  getCaption,
   getProposedFilename,
+  mergeArtworkRowCaption,
   normalizeSourceLectionaryUrl,
   parseArtLinks,
   type ExistingLessonForSync,
+  type LessonArtworkRowForSync,
   type LessonSyncInput,
 } from '../../scripts/lesson-sync-helpers'
 
@@ -30,6 +33,10 @@ const draftLesson: ExistingLessonForSync = {
   sourceLectionaryUrl: 'https://episcopalchurch.org/lectionary/easter-6a/',
   status: 'draft',
   title: 'Older title',
+}
+
+type TestArtworkRow = LessonArtworkRowForSync<number> & {
+  id?: string
 }
 
 describe('lesson sync planning', () => {
@@ -69,6 +76,17 @@ describe('lesson sync planning', () => {
     expect(target.matchReason).toBe('source-url-date')
   })
 
+  it('allows published matches only for explicit art-only updates', () => {
+    const target = chooseLessonSyncTarget(
+      syncInput,
+      [{ ...draftLesson, status: 'published' }],
+      { allowPublishedArtUpdate: true },
+    )
+
+    expect(target.action).toBe('update-published-art')
+    expect(target.matchReason).toBe('source-url-date')
+  })
+
   it('plans a draft create when no match exists', () => {
     const target = chooseLessonSyncTarget(syncInput, [])
     const data = buildLessonSyncData(syncInput)
@@ -93,11 +111,94 @@ describe('lesson sync planning', () => {
         '',
         '- Source: https://example.test/source',
         '- Image: https://example.test/image.jpg',
+        '- Medium: Tapestry cartoon',
+        '- Accessibility description: Paul stands before a group of listeners in Athens.',
+        '- Description: Paul meets his listeners where they are before naming the unknown God.',
+      ].join('\n'),
+    )
+
+    expect(getAltText(artwork)).toBe('Paul stands before a group of listeners in Athens.')
+    expect(artwork.medium).toBe('Tapestry cartoon')
+    expect(artwork.description).toBe('Paul meets his listeners where they are before naming the unknown God.')
+    expect(getCaption(artwork)).toBe('Paul meets his listeners where they are before naming the unknown God.')
+  })
+
+  it('keeps legacy Description-only art links as alt text instead of captions', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Raphael, *St Paul Preaching at Athens*, c. 1515-1516',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/image.jpg',
         '- Description: Paul stands before a group of listeners in Athens.',
       ].join('\n'),
     )
 
     expect(getAltText(artwork)).toBe('Paul stands before a group of listeners in Athens.')
+    expect(artwork.description).toBeUndefined()
+    expect(getCaption(artwork)).toBe('Raphael, St Paul Preaching at Athens (c. 1515-1516)')
+  })
+})
+
+describe('lesson sync artwork rows', () => {
+  it('refreshes captions for artwork rows that already have matching media', () => {
+    const rows: TestArtworkRow[] = [
+      {
+        id: 'row-1',
+        image: 122,
+        caption: 'El Greco, The Pentecost (c. 1596-1600)',
+      },
+      {
+        id: 'row-2',
+        image: { id: 150 },
+        caption: 'Bruegel old caption',
+      },
+    ]
+
+    const change = mergeArtworkRowCaption(
+      rows,
+      122 as number,
+      'The apostles and Mary press together beneath a descending dove and tongues of fire.',
+      (image, caption) => ({ image, caption }),
+    )
+
+    expect(change).toBe('updated')
+    expect(rows[0]).toEqual({
+      id: 'row-1',
+      image: 122,
+      caption: 'The apostles and Mary press together beneath a descending dove and tongues of fire.',
+    })
+    expect(rows).toHaveLength(2)
+  })
+
+  it('adds a row only when no matching media is already attached', () => {
+    const rows: TestArtworkRow[] = [
+      {
+        id: 'row-1',
+        image: { id: 122 },
+        caption: 'Existing caption',
+      },
+    ]
+
+    const change = mergeArtworkRowCaption(
+      rows,
+      150 as number,
+      'Bruegel gives Pentecost a visual foil.',
+      (image, caption) => ({ image, caption }),
+    )
+
+    expect(change).toBe('added')
+    expect(rows).toEqual([
+      {
+        id: 'row-1',
+        image: { id: 122 },
+        caption: 'Existing caption',
+      },
+      {
+        image: 150,
+        caption: 'Bruegel gives Pentecost a visual foil.',
+      },
+    ])
   })
 })
 
@@ -140,13 +241,17 @@ describe('lesson sync artwork filenames', () => {
       [
         '## Artist, *Work*, 1900',
         '',
-        '- Source: https://example.test/source',
-        '- Image: https://example.test/small.jpg',
-        '- Higher-resolution alternate image: https://example.test/large.jpg',
-        '- Higher-resolution alternate source: https://example.test/large-source',
+        '- Source: <https://example.test/source>',
+        '- Image: [small](https://example.test/small.jpg)',
+        '- Local file: /Users/sethwilson/dev/garden-mission-control/lessons/runs/easter-6a/_work/verified-images/work.jpg',
+        '- Higher-resolution alternate image: <https://example.test/large.jpg>',
+        '- Higher-resolution alternate source: https://example.test/large-source.',
       ].join('\n'),
     )
 
+    expect(artwork.sourceUrl).toBe('https://example.test/source')
+    expect(artwork.imageUrl).toBe('https://example.test/small.jpg')
+    expect(artwork.localFilePath).toBe('/Users/sethwilson/dev/garden-mission-control/lessons/runs/easter-6a/_work/verified-images/work.jpg')
     expect(artwork.alternateImageUrl).toBe('https://example.test/large.jpg')
     expect(artwork.alternateSourceUrl).toBe('https://example.test/large-source')
   })

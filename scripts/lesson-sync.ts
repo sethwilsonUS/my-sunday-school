@@ -12,6 +12,7 @@ import {
   getAltText,
   getCaption,
   getProposedFilename,
+  mergeArtworkRowCaption,
   normalizeSourceLectionaryUrl,
   parseArtLinks,
   slugify,
@@ -28,6 +29,7 @@ dotenv.config()
 const { default: config } = await import('../src/payload.config.js')
 
 type Options = {
+  allowPublishedArt: boolean
   artLinksPath?: string
   collect?: string
   confirmSharedDB: boolean
@@ -52,10 +54,10 @@ type MediaMatch = {
 }
 
 const usage = `Usage:
-  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --replace-existing-art
-  pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --replace-existing-art
+  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --allow-published-art --replace-existing-art
+  pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --allow-published-art --replace-existing-art
 
-Default mode is a dry run. Write mode requires --write and --confirm-shared-db. Matching is by sourceLectionaryUrl + date first, then slug. Published matches are blocked by default.
+Default mode is a dry run. Write mode requires --write and --confirm-shared-db. Matching is by sourceLectionaryUrl + date first, then slug. Published matches are blocked by default; --allow-published-art permits an art-only append/replace when --art-links is present.
 `
 
 function readFlagValue(args: string[], index: number, flag: string) {
@@ -69,7 +71,7 @@ function readFlagValue(args: string[], index: number, flag: string) {
 }
 
 function parseArgs(args: string[]): Options {
-  const options: Options = { confirmSharedDB: false, help: false, replaceExistingArt: false, write: false }
+  const options: Options = { allowPublishedArt: false, confirmSharedDB: false, help: false, replaceExistingArt: false, write: false }
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
@@ -82,6 +84,9 @@ function parseArgs(args: string[]): Options {
     const getValue = () => inlineValue ?? readFlagValue(args, index++, flag)
 
     switch (flag) {
+      case '--allow-published-art':
+        options.allowPublishedArt = true
+        break
       case '--art-links':
         options.artLinksPath = getValue()
         break
@@ -131,6 +136,10 @@ function parseArgs(args: string[]): Options {
 
   if (options.write && !options.confirmSharedDB) {
     throw new Error('Write mode requires --confirm-shared-db.')
+  }
+
+  if (options.allowPublishedArt && !options.artLinksPath) {
+    throw new Error('--allow-published-art requires --art-links.')
   }
 
   return options
@@ -239,6 +248,13 @@ async function findExistingMedia(payload: Payload, artwork: DownloadedArtwork): 
     return { media: filenameMatches.docs[0], reason: `filename matches ${artwork.proposedFilename}` }
   }
 
+  return findExistingMediaBySource(payload, artwork)
+}
+
+async function findExistingMediaBySource(
+  payload: Payload,
+  artwork: Pick<ArtworkLink, 'alternateSourceUrl' | 'sourceUrl'>,
+): Promise<MediaMatch | null> {
   const sourceMatches = await payload.find({
     collection: 'media',
     depth: 0,
@@ -266,24 +282,13 @@ async function findExistingMedia(payload: Payload, artwork: DownloadedArtwork): 
   return null
 }
 
-function getArtworkImageId(artwork: NonNullable<Lesson['artworks']>[number]) {
-  if (typeof artwork.image === 'number') {
-    return artwork.image
-  }
-
-  return artwork.image.id
-}
-
-function artworkRowsHaveMedia(rows: NonNullable<Lesson['artworks']>, mediaId: number) {
-  return rows.some((artwork) => getArtworkImageId(artwork) === mediaId)
-}
-
 async function createMedia(payload: Payload, artwork: DownloadedArtwork) {
   return payload.create({
     collection: 'media',
     data: {
       altText: getAltText(artwork),
       artist: artwork.artist,
+      medium: artwork.medium,
       workDate: artwork.workDate,
       wikimediaUrl: artwork.sourceUrl,
     },
@@ -324,6 +329,7 @@ async function syncArtwork({
   let mediaRecordsPlanned = 0
   let lessonArtworkRowsAdded = 0
   let lessonArtworkRowsPlanned = 0
+  let lessonArtworkRowsUpdated = 0
 
   console.log(`Art links: ${artLinksPath}`)
   console.log(`Artwork row mode: ${replaceExistingArt ? 'replace existing lesson artwork rows' : 'append missing artwork rows'}`)
@@ -331,54 +337,74 @@ async function syncArtwork({
 
   for (const [index, artwork] of artworks.entries()) {
     console.log(`[${index + 1}/${artworks.length}] ${artwork.heading}`)
-    const downloaded = await downloadArtwork(artwork)
-    const existingMedia = await findExistingMedia(payload, downloaded)
+    const caption = getCaption(artwork)
 
-    console.log(`  source: ${downloaded.sourceUrl}`)
-    console.log(`  image: ${downloaded.imageUrl}`)
-    if (downloaded.resolvedImageUrl && downloaded.resolvedImageUrl !== downloaded.imageUrl) {
-      console.log(`  resolved upload: ${downloaded.resolvedImageUrl}`)
-      console.log(`  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`)
-    }
-
-    if (downloaded.resolvedImageSize) {
-      console.log(`  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`)
-    }
-
-    console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}`)
-    console.log(`  proposed filename: ${downloaded.proposedFilename}`)
-    console.log(`  alt text: ${getAltText(downloaded)}`)
-    console.log(`  caption: ${getCaption(downloaded)}`)
+    console.log(`  source: ${artwork.sourceUrl}`)
+    console.log(`  image: ${artwork.imageUrl}`)
+    console.log(`  alt text: ${getAltText(artwork)}`)
+    console.log(`  caption: ${caption}`)
 
     let mediaId: number | null = null
+    const sourceMedia = await findExistingMediaBySource(payload, artwork)
 
-    if (existingMedia) {
-      mediaId = existingMedia.media.id
-      console.log(`  media: reuse id ${mediaId} (${existingMedia.reason})`)
-    } else if (write) {
-      const media = await createMedia(payload, downloaded)
-      mediaId = media.id
-      mediaRecordsCreated += 1
-      console.log(`  media: created id ${mediaId}`)
+    if (sourceMedia) {
+      mediaId = sourceMedia.media.id
+      console.log(`  media: reuse id ${mediaId} (${sourceMedia.reason}; skipped download)`)
     } else {
-      mediaRecordsPlanned += 1
-      lessonArtworkRowsPlanned += 1
-      console.log('  media: would upload new media record')
-      console.log('  lesson: would include newly uploaded media in target artwork rows')
-      console.log('')
-      continue
+      const downloaded = await downloadArtwork(artwork)
+      const existingMedia = await findExistingMedia(payload, downloaded)
+
+      if (downloaded.resolvedImageUrl && downloaded.resolvedImageUrl !== downloaded.imageUrl) {
+        console.log(`  resolved upload: ${downloaded.resolvedImageUrl}`)
+        console.log(`  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`)
+      }
+
+      if (downloaded.resolvedImageSize) {
+        console.log(`  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`)
+      }
+
+      console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}`)
+      console.log(`  proposed filename: ${downloaded.proposedFilename}`)
+
+      if (existingMedia) {
+        mediaId = existingMedia.media.id
+        console.log(`  media: reuse id ${mediaId} (${existingMedia.reason})`)
+      } else if (write) {
+        const media = await createMedia(payload, downloaded)
+        mediaId = media.id
+        mediaRecordsCreated += 1
+        console.log(`  media: created id ${mediaId}`)
+      } else {
+        mediaRecordsPlanned += 1
+        lessonArtworkRowsPlanned += 1
+        console.log('  media: would upload new media record')
+        console.log('  lesson: would include newly uploaded media in target artwork rows')
+        console.log('')
+        continue
+      }
     }
 
-    if (mediaId && artworkRowsHaveMedia(attachmentRows, mediaId)) {
-      console.log('  lesson: already queued in target artwork rows; skipped duplicate')
-    } else if (mediaId) {
-      attachmentRows.push({ image: mediaId, caption: getCaption(downloaded) })
-      if (write) {
-        lessonArtworkRowsAdded += 1
-        console.log('  lesson: queued target artwork row')
+    if (mediaId) {
+      const rowChange = mergeArtworkRowCaption(
+        attachmentRows,
+        mediaId,
+        caption,
+        (image, rowCaption) => ({ image, caption: rowCaption }),
+      )
+
+      if (rowChange === 'added') {
+        if (write) {
+          lessonArtworkRowsAdded += 1
+          console.log('  lesson: queued target artwork row')
+        } else {
+          lessonArtworkRowsPlanned += 1
+          console.log('  lesson: would include existing media in target artwork rows')
+        }
+      } else if (rowChange === 'updated') {
+        lessonArtworkRowsUpdated += 1
+        console.log(write ? '  lesson: updated existing artwork caption' : '  lesson: would update existing artwork caption')
       } else {
-        lessonArtworkRowsPlanned += 1
-        console.log('  lesson: would include existing media in target artwork rows')
+        console.log('  lesson: already queued in target artwork rows with current caption')
       }
     }
 
@@ -392,6 +418,7 @@ async function syncArtwork({
     mediaRecordsPlanned,
     lessonArtworkRowsAdded,
     lessonArtworkRowsPlanned,
+    lessonArtworkRowsUpdated,
   }
 }
 
@@ -425,16 +452,23 @@ async function main() {
 
       throw error
     })
-    const target = chooseLessonSyncTarget(input, candidates as ExistingLessonForSync[])
+    const target = chooseLessonSyncTarget(input, candidates as ExistingLessonForSync[], {
+      allowPublishedArtUpdate: options.allowPublishedArt && Boolean(options.artLinksPath),
+    })
 
     if (target.action === 'blocked-published') {
       console.log(`Matched published lesson by ${target.matchReason}: ${target.lesson.title} (id ${target.lesson.id})`)
-      throw new Error('Matching lesson is published; refusing to update without an explicit override.')
+      throw new Error('Matching lesson is published; refusing to update without --allow-published-art and --art-links.')
     }
 
-    console.log('Planned lesson metadata:')
-    console.log(JSON.stringify(lessonData, null, 2))
-    console.log('')
+    if (target.action === 'update-published-art') {
+      console.log('Planned lesson metadata: skipped because --allow-published-art is art-only for published lessons.')
+      console.log('')
+    } else {
+      console.log('Planned lesson metadata:')
+      console.log(JSON.stringify(lessonData, null, 2))
+      console.log('')
+    }
 
     let lesson: LessonWithSource | undefined
 
@@ -451,7 +485,7 @@ async function main() {
         }) as LessonWithSource
         console.log(`Created draft lesson: ${lesson.title}`)
       }
-    } else {
+    } else if (target.action === 'update-draft') {
       lesson = target.lesson as LessonWithSource
       console.log(`Lesson match: ${target.matchReason} -> ${lesson.title} (id ${lesson.id}, status ${lesson.status})`)
       console.log(options.write ? 'Action: update draft lesson metadata.' : 'Action: would update draft lesson metadata.')
@@ -466,6 +500,10 @@ async function main() {
         }) as LessonWithSource
         console.log(`Updated draft lesson: ${lesson.title}`)
       }
+    } else {
+      lesson = target.lesson as LessonWithSource
+      console.log(`Lesson match: ${target.matchReason} -> ${lesson.title} (id ${lesson.id}, status ${lesson.status})`)
+      console.log(options.write ? 'Action: update published lesson artwork only.' : 'Action: would update published lesson artwork only.')
     }
 
     let artworkSummary:
@@ -502,11 +540,13 @@ async function main() {
       if (options.write) {
         console.log(`Created new media records: ${artworkSummary.mediaRecordsCreated}`)
         console.log(`Added lesson artwork rows: ${artworkSummary.lessonArtworkRowsAdded}`)
+        console.log(`Updated lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`)
         console.log(`Final lesson artwork rows: ${artworkSummary.attachmentRows.length}`)
         console.log('Payload writes were made.')
       } else {
         console.log(`Would upload new media records: ${artworkSummary.mediaRecordsPlanned}`)
         console.log(`Would add lesson artwork rows: ${artworkSummary.lessonArtworkRowsPlanned}`)
+        console.log(`Would update lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`)
         console.log(`Would set final lesson artwork rows to: ${artworkSummary.finalArtworkRowCount}`)
         console.log('No Payload writes were made.')
       }

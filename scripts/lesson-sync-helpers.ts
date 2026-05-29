@@ -37,18 +37,25 @@ export type LessonSyncTarget =
       matchReason?: undefined
     }
   | {
-      action: 'update-draft' | 'blocked-published'
+      action: 'update-draft' | 'update-published-art' | 'blocked-published'
       lesson: ExistingLessonForSync
       matchReason: 'slug' | 'source-url-date'
     }
+
+export type LessonSyncTargetOptions = {
+  allowPublishedArtUpdate?: boolean
+}
 
 export type ArtworkLink = {
   accessibleDescription?: string
   alternateImageUrl?: string
   alternateSourceUrl?: string
   artist: string
+  description?: string
   heading: string
   imageUrl: string
+  localFilePath?: string
+  medium?: string
   note?: string
   sourceUrl: string
   title: string
@@ -65,6 +72,13 @@ export type DownloadedArtwork = ArtworkLink & {
   resolvedImageSize?: ImageDimensions
   resolvedImageUrl?: string
 }
+
+export type LessonArtworkRowForSync<MediaId extends number | string = number | string> = {
+  caption?: string | null
+  image: MediaId | { id: MediaId }
+}
+
+export type LessonArtworkRowCaptionChange = 'added' | 'updated' | 'unchanged'
 
 export function normalizeSourceLectionaryUrl(value: string | undefined) {
   if (!value?.trim()) {
@@ -86,6 +100,7 @@ export function normalizeSourceLectionaryUrl(value: string | undefined) {
 export function chooseLessonSyncTarget(
   input: LessonSyncInput,
   lessons: ExistingLessonForSync[],
+  options: LessonSyncTargetOptions = {},
 ): LessonSyncTarget {
   const normalizedSourceUrl = normalizeSourceLectionaryUrl(input.sourceUrl)
   const date = input.date.slice(0, 10)
@@ -101,13 +116,13 @@ export function chooseLessonSyncTarget(
     : undefined
 
   if (sourceMatch) {
-    return lessonTargetFor(sourceMatch, 'source-url-date')
+    return lessonTargetFor(sourceMatch, 'source-url-date', options)
   }
 
   const slugMatch = lessons.find((lesson) => lesson.slug === input.slug)
 
   if (slugMatch) {
-    return lessonTargetFor(slugMatch, 'slug')
+    return lessonTargetFor(slugMatch, 'slug', options)
   }
 
   return { action: 'create-draft' }
@@ -128,6 +143,30 @@ export function buildLessonSyncData(input: LessonSyncInput) {
 
 function cleanString(value: string | undefined) {
   return value?.trim() || undefined
+}
+
+function urlValue(value: string | undefined) {
+  const raw = cleanString(value)
+
+  if (!raw) {
+    return undefined
+  }
+
+  const markdownLinkMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i)
+
+  if (markdownLinkMatch?.[1]) {
+    return markdownLinkMatch[1]
+  }
+
+  const angleMatch = raw.match(/^<([^>\s]+)>$/)
+
+  if (angleMatch?.[1]) {
+    return angleMatch[1]
+  }
+
+  const inlineUrlMatch = raw.match(/https?:\/\/\S+/i)
+  const resolved = inlineUrlMatch?.[0] ?? raw
+  return resolved.replace(/[),.;\]]+$/g, '')
 }
 
 export function slugify(value: string) {
@@ -162,8 +201,8 @@ export function parseArtLinks(markdown: string) {
       }
     }
 
-    const sourceUrl = fields.get('source')
-    const imageUrl = fields.get('image')
+    const sourceUrl = urlValue(fields.get('source'))
+    const imageUrl = urlValue(fields.get('image'))
 
     if (!sourceUrl || !imageUrl) {
       throw new Error(`Artwork section is missing Source or Image: ${heading}`)
@@ -171,25 +210,49 @@ export function parseArtLinks(markdown: string) {
 
     const parsedHeading = parseHeading(heading)
 
+    const explicitAccessibleDescription =
+      fields.get('accessible description') ??
+      fields.get('accessibility description') ??
+      fields.get('alt text')
+    const genericDescription = fields.get('description')
+
     artworks.push({
       ...parsedHeading,
       accessibleDescription:
-        fields.get('accessible description') ??
-        fields.get('accessibility description') ??
-        fields.get('description') ??
-        fields.get('alt text'),
+        explicitAccessibleDescription ??
+        genericDescription,
       alternateImageUrl:
-        fields.get('alternate image') ??
-        fields.get('alternate commons image') ??
-        fields.get('higher-resolution alternate image') ??
-        fields.get('alternate image used in the handout'),
+        urlValue(
+          fields.get('alternate image') ??
+            fields.get('alternate commons image') ??
+            fields.get('higher-resolution alternate image') ??
+            fields.get('alternate image used in the handout'),
+        ),
       alternateSourceUrl:
-        fields.get('alternate source') ??
-        fields.get('alternate commons source') ??
-        fields.get('higher-resolution alternate source') ??
-        fields.get('alternate source used in the handout'),
+        urlValue(
+          fields.get('alternate source') ??
+            fields.get('alternate commons source') ??
+            fields.get('higher-resolution alternate source') ??
+            fields.get('alternate source used in the handout'),
+        ),
+      description:
+        fields.get('theme') ??
+        fields.get('classroom caption') ??
+        fields.get('caption') ??
+        fields.get('why this week') ??
+        fields.get('why') ??
+        (explicitAccessibleDescription ? genericDescription : undefined),
       heading,
       imageUrl,
+      localFilePath:
+        cleanString(
+          fields.get('local file') ??
+            fields.get('local image') ??
+            fields.get('local image file') ??
+            fields.get('verified local file') ??
+            fields.get('downloaded image'),
+        ),
+      medium: cleanString(fields.get('medium') ?? fields.get('media')),
       note: fields.get('note'),
       sourceUrl,
     })
@@ -207,6 +270,10 @@ export function getAltText(artwork: ArtworkLink) {
 }
 
 export function getCaption(artwork: ArtworkLink) {
+  if (artwork.description?.trim()) {
+    return artwork.description.trim()
+  }
+
   return `${artwork.artist}, ${artwork.title}${artwork.workDate ? ` (${artwork.workDate})` : ''}`
 }
 
@@ -217,12 +284,55 @@ export function getProposedFilename(artwork: ArtworkLink, mimeType: string, _res
   return `${slugify(`${artwork.artist}-${artwork.title}`)}${dateSuffix}.${extension}`
 }
 
+export function getArtworkRowImageId<MediaId extends number | string>(
+  artwork: LessonArtworkRowForSync<MediaId>,
+) {
+  if (typeof artwork.image === 'object') {
+    return artwork.image.id
+  }
+
+  return artwork.image
+}
+
+export function mergeArtworkRowCaption<
+  MediaId extends number | string,
+  Row extends LessonArtworkRowForSync<MediaId>,
+>(
+  rows: Row[],
+  mediaId: MediaId,
+  caption: string,
+  createRow: (mediaId: MediaId, caption: string) => Row,
+): LessonArtworkRowCaptionChange {
+  const normalizedCaption = caption.trim()
+  const existingIndex = rows.findIndex((artwork) => String(getArtworkRowImageId(artwork)) === String(mediaId))
+
+  if (existingIndex === -1) {
+    rows.push(createRow(mediaId, normalizedCaption))
+    return 'added'
+  }
+
+  const existing = rows[existingIndex]
+
+  if ((existing.caption ?? '').trim() === normalizedCaption) {
+    return 'unchanged'
+  }
+
+  rows[existingIndex] = { ...existing, caption: normalizedCaption }
+  return 'updated'
+}
+
 function lessonTargetFor(
   lesson: ExistingLessonForSync,
   matchReason: 'slug' | 'source-url-date',
+  options: LessonSyncTargetOptions,
 ): LessonSyncTarget {
   return {
-    action: lesson.status === 'published' ? 'blocked-published' : 'update-draft',
+    action:
+      lesson.status === 'published'
+        ? options.allowPublishedArtUpdate
+          ? 'update-published-art'
+          : 'blocked-published'
+        : 'update-draft',
     lesson,
     matchReason,
   }
