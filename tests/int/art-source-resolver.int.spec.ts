@@ -1,6 +1,9 @@
 // @vitest-environment node
 
 import { lookup as dnsLookup } from 'node:dns/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 
 import sharp from 'sharp'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -54,7 +57,7 @@ const fetchUrl = (url: Parameters<typeof fetch>[0]) =>
 
 beforeEach(() => {
   vi.mocked(dnsLookup).mockReset()
-  vi.mocked(dnsLookup).mockResolvedValue([{ address: '203.0.113.10', family: 4 }])
+  vi.mocked(dnsLookup).mockResolvedValue([{ address: '203.0.113.10', family: 4 }] as never)
 })
 
 describe('art source resolver', () => {
@@ -378,6 +381,31 @@ describe('art source resolver network resolution', () => {
     expect(resolved.dimensions).toEqual({ width: 1200, height: 800 })
   })
 
+  it('uses a verified local image before remote candidates', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'art-source-resolver-'))
+    const filePath = path.join(dir, 'rublev.jpg')
+
+    try {
+      await writeFile(filePath, await imageBuffer(128, 96))
+
+      const fetchFn = vi.fn(async () => new Response('rate limited', { status: 429, statusText: 'Too many requests' }))
+      const resolved = await resolveArtworkImage(
+        {
+          imageUrl: 'https://example.test/rublev.jpg',
+          localFilePath: filePath,
+        },
+        { fetchFn },
+      )
+
+      expect(resolved.url).toBe(filePath)
+      expect(resolved.reason).toBe('local image file')
+      expect(resolved.dimensions).toEqual({ height: 96, width: 128 })
+      expect(fetchFn).not.toHaveBeenCalled()
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
+  })
+
   it('caps source-page HTML reads and still validates direct candidates', async () => {
     const image = await imageBuffer(1300, 900)
     const fetchFn: typeof fetch = async (url) => {
@@ -571,7 +599,7 @@ describe('art source resolver network resolution', () => {
   })
 
   it('resolves hostnames before fetching through a custom fetch function', async () => {
-    vi.mocked(dnsLookup).mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }])
+    vi.mocked(dnsLookup).mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }] as never)
 
     const fetchedUrls: string[] = []
     const fetchFn: typeof fetch = async (url) => {

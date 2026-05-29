@@ -1,6 +1,9 @@
 import crypto from 'node:crypto'
 import { lookup as dnsLookup } from 'node:dns/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { isIP } from 'node:net'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import sharp from 'sharp'
 
@@ -117,6 +120,7 @@ export type ArtworkResolverInput = {
   alternateSourceUrl?: string | null
   artist?: string | null
   imageUrl?: string | null
+  localFilePath?: string | null
   sourceUrl?: string | null
   title?: string | null
   workDate?: string | null
@@ -160,6 +164,25 @@ export async function resolveArtworkImage(
 ): Promise<ResolvedArtworkImage> {
   const fetchFn = options.fetchFn ?? fetch
   const failures: string[] = []
+  const providedImageUrl = input.imageUrl?.trim() || undefined
+  const localCandidate = await validateLocalImageCandidate(input.localFilePath, options).catch((error: unknown) => {
+    if (input.localFilePath?.trim()) {
+      failures.push(`${input.localFilePath.trim()}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+
+    return undefined
+  })
+
+  if (localCandidate) {
+    return {
+      ...localCandidate,
+      changedFromProvided: Boolean(providedImageUrl) && normalizeUrl(localCandidate.url) !== normalizeUrl(providedImageUrl),
+      failures,
+      providedImageUrl,
+      sha256: crypto.createHash('sha256').update(localCandidate.buffer).digest('hex'),
+    }
+  }
+
   const candidates = await collectCandidateHints(input, { ...options, fetchFn }, failures)
   const validated: ValidatedArtImageCandidate[] = []
 
@@ -176,7 +199,6 @@ export async function resolveArtworkImage(
   }
 
   const chosen = choosePreferredCandidate(validated)
-  const providedImageUrl = input.imageUrl?.trim() || undefined
 
   if (!chosen) {
     throw new Error(`No usable image candidate found. ${failures.join('; ')}`.trim())
@@ -255,6 +277,72 @@ async function addCandidate(
   if (validatedUrl) {
     candidates.push({ reason, url: validatedUrl })
   }
+}
+
+async function validateLocalImageCandidate(
+  localFilePath: string | null | undefined,
+  options: ResolveArtworkImageOptions,
+): Promise<ValidatedArtImageCandidate | undefined> {
+  const filePath = normalizeLocalImagePath(localFilePath)
+
+  if (!filePath) {
+    return undefined
+  }
+
+  const maxBytes = options.maxBytes ?? DEFAULT_MAX_IMAGE_BYTES
+  const fileStat = await stat(filePath)
+
+  if (!fileStat.isFile()) {
+    throw new Error('local image path is not a file')
+  }
+
+  if (fileStat.size > maxBytes) {
+    throw new Error(`local image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+  }
+
+  const buffer = await readFile(filePath)
+
+  if (buffer.length > maxBytes) {
+    throw new Error(`local image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
+  }
+
+  const metadata = await sharp(buffer, { limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS }).metadata()
+  const mimeType = mimeTypeFromSharpMetadata(metadata.format, metadata.compression) ?? 'image/jpeg'
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error('local image dimensions could not be read')
+  }
+
+  return {
+    buffer,
+    contentLength: buffer.length,
+    dimensions: { height: metadata.height, width: metadata.width },
+    mimeType,
+    reason: 'local image file',
+    url: filePath,
+  }
+}
+
+function normalizeLocalImagePath(value: string | null | undefined) {
+  const raw = value?.trim()
+
+  if (!raw) {
+    return undefined
+  }
+
+  try {
+    if (raw.startsWith('file://')) {
+      return fileURLToPath(raw)
+    }
+  } catch {
+    throw new Error('invalid file URL')
+  }
+
+  if (!path.isAbsolute(raw)) {
+    throw new Error('local image path must be absolute')
+  }
+
+  return raw
 }
 
 function uniqueCandidateHints(candidates: CandidateHint[]) {
