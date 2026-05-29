@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 import { getPayload } from 'payload'
 
 import { SEASON_OPTIONS } from '../src/lib/liturgical-themes'
+import { parseObservanceType, type ObservanceType } from '../src/lib/observance-types'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -12,6 +13,7 @@ type Options = {
   date?: string
   help: boolean
   lectionaryYear?: 'A' | 'B' | 'C'
+  observanceType?: ObservanceType
   season?: string
   slug?: string
   title?: string
@@ -20,6 +22,7 @@ type Options = {
 
 const usage = `Usage:
   pnpm lesson:create-draft -- --date 2026-05-03 --title "Fifth Sunday of Easter" --season easter --year A
+  pnpm lesson:create-draft -- --date 2026-05-31 --title "The Visitation of the Blessed Virgin Mary" --season easter --type holy-day
   pnpm lesson:create-draft -- --write --date 2026-05-03 --title "Fifth Sunday of Easter" --season easter --year A
   pnpm lesson:create-draft -- --write --date 2026-05-03 --title "Year A Fifth Sunday of Easter" --season easter --year A --slug 2026-05-03-year-a-fifth-sunday-of-easter
 
@@ -66,6 +69,10 @@ function parseArgs(args: string[]): Options {
         break
       case '--season':
         options.season = getValue()
+        break
+      case '--observance-type':
+      case '--type':
+        options.observanceType = parseObservanceType(getValue())
         break
       case '--slug':
         options.slug = getValue()
@@ -135,6 +142,7 @@ async function main() {
     date,
     lectionaryYear: options.lectionaryYear,
     liturgicalSeason,
+    observanceType: options.observanceType ?? 'sunday',
     slug,
     status: 'draft' as const,
     title,

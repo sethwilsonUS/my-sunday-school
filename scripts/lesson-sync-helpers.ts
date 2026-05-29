@@ -1,11 +1,15 @@
 import { extensionFromMimeType } from './art-source-resolver'
 import type { ImageDimensions } from './art-source-resolver'
+import { DEFAULT_OBSERVANCE_TYPE, type ObservanceType } from '../src/lib/observance-types'
+
+export type { ObservanceType }
 
 export type LessonSyncInput = {
   collect?: string
   date: string
   lectionaryYear?: 'A' | 'B' | 'C'
   liturgicalSeason: LiturgicalSeasonValue
+  observanceType?: ObservanceType
   slug: string
   sourceUrl?: string
   title: string
@@ -110,7 +114,8 @@ export function chooseLessonSyncTarget(
         const lessonDate = lesson.date?.slice(0, 10)
         return (
           lessonDate === date &&
-          normalizeSourceLectionaryUrl(lesson.sourceLectionaryUrl ?? undefined) === normalizedSourceUrl
+          normalizeSourceLectionaryUrl(lesson.sourceLectionaryUrl ?? undefined) ===
+            normalizedSourceUrl
         )
       })
     : undefined
@@ -134,6 +139,7 @@ export function buildLessonSyncData(input: LessonSyncInput) {
     date: input.date,
     lectionaryYear: input.lectionaryYear,
     liturgicalSeason: input.liturgicalSeason,
+    observanceType: input.observanceType ?? DEFAULT_OBSERVANCE_TYPE,
     slug: input.slug,
     sourceLectionaryUrl: normalizeSourceLectionaryUrl(input.sourceUrl),
     status: 'draft' as const,
@@ -218,23 +224,19 @@ export function parseArtLinks(markdown: string) {
 
     artworks.push({
       ...parsedHeading,
-      accessibleDescription:
-        explicitAccessibleDescription ??
-        genericDescription,
-      alternateImageUrl:
-        urlValue(
-          fields.get('alternate image') ??
-            fields.get('alternate commons image') ??
-            fields.get('higher-resolution alternate image') ??
-            fields.get('alternate image used in the handout'),
-        ),
-      alternateSourceUrl:
-        urlValue(
-          fields.get('alternate source') ??
-            fields.get('alternate commons source') ??
-            fields.get('higher-resolution alternate source') ??
-            fields.get('alternate source used in the handout'),
-        ),
+      accessibleDescription: explicitAccessibleDescription ?? genericDescription,
+      alternateImageUrl: urlValue(
+        fields.get('alternate image') ??
+          fields.get('alternate commons image') ??
+          fields.get('higher-resolution alternate image') ??
+          fields.get('alternate image used in the handout'),
+      ),
+      alternateSourceUrl: urlValue(
+        fields.get('alternate source') ??
+          fields.get('alternate commons source') ??
+          fields.get('higher-resolution alternate source') ??
+          fields.get('alternate source used in the handout'),
+      ),
       description:
         fields.get('theme') ??
         fields.get('classroom caption') ??
@@ -244,14 +246,13 @@ export function parseArtLinks(markdown: string) {
         (explicitAccessibleDescription ? genericDescription : undefined),
       heading,
       imageUrl,
-      localFilePath:
-        cleanString(
-          fields.get('local file') ??
-            fields.get('local image') ??
-            fields.get('local image file') ??
-            fields.get('verified local file') ??
-            fields.get('downloaded image'),
-        ),
+      localFilePath: cleanString(
+        fields.get('local file') ??
+          fields.get('local image') ??
+          fields.get('local image file') ??
+          fields.get('verified local file') ??
+          fields.get('downloaded image'),
+      ),
       medium: cleanString(fields.get('medium') ?? fields.get('media')),
       note: fields.get('note'),
       sourceUrl,
@@ -277,7 +278,11 @@ export function getCaption(artwork: ArtworkLink) {
   return `${artwork.artist}, ${artwork.title}${artwork.workDate ? ` (${artwork.workDate})` : ''}`
 }
 
-export function getProposedFilename(artwork: ArtworkLink, mimeType: string, _resolvedImageUrl = artwork.imageUrl) {
+export function getProposedFilename(
+  artwork: ArtworkLink,
+  mimeType: string,
+  _resolvedImageUrl = artwork.imageUrl,
+) {
   const extension = extensionFromMimeType(mimeType)
   const dateSuffix = artwork.workDate ? `-${slugify(artwork.workDate)}` : ''
 
@@ -304,7 +309,9 @@ export function mergeArtworkRowCaption<
   createRow: (mediaId: MediaId, caption: string) => Row,
 ): LessonArtworkRowCaptionChange {
   const normalizedCaption = caption.trim()
-  const existingIndex = rows.findIndex((artwork) => String(getArtworkRowImageId(artwork)) === String(mediaId))
+  const existingIndex = rows.findIndex(
+    (artwork) => String(getArtworkRowImageId(artwork)) === String(mediaId),
+  )
 
   if (existingIndex === -1) {
     rows.push(createRow(mediaId, normalizedCaption))

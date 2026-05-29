@@ -1,5 +1,8 @@
+import { DEFAULT_OBSERVANCE_TYPE, type ObservanceType } from './observance-types'
+
 type DatedLesson = {
   date: string
+  observanceType?: ObservanceType | null
 }
 
 export type HomepageLessonSelection<T extends DatedLesson> = {
@@ -46,6 +49,10 @@ export const splitLessonsForHomepage = <T extends DatedLesson>(
   let mostRecentPastValue = Number.NEGATIVE_INFINITY
 
   lessons.forEach((lesson, index) => {
+    if ((lesson.observanceType ?? DEFAULT_OBSERVANCE_TYPE) !== 'sunday') {
+      return
+    }
+
     const lessonDayValue = getUTCDayValue(lesson.date)
 
     if (lessonDayValue === null) {
@@ -70,12 +77,13 @@ export const splitLessonsForHomepage = <T extends DatedLesson>(
       ? closestUpcomingIndex
       : mostRecentPastIndex >= 0
         ? mostRecentPastIndex
-        : 0
+        : -1
   const featuredLesson = lessons[featuredIndex] ?? null
 
   return {
     featuredLesson,
-    featuredLessonContext: closestUpcomingIndex >= 0 ? 'upcoming' : 'past',
+    featuredLessonContext:
+      featuredIndex === -1 ? 'none' : closestUpcomingIndex >= 0 ? 'upcoming' : 'past',
     supportingLessons: lessons.filter((_lesson, index) => index !== featuredIndex),
   }
 }

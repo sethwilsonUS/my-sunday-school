@@ -7,6 +7,7 @@ export const testLesson = {
   date: '2026-04-23',
   lectionaryYear: 'C',
   liturgicalSeason: 'easter',
+  observanceType: 'sunday',
   slug: '2026-04-23-admin-ux-test',
   status: 'published',
   title: 'Admin UX Test Lesson',

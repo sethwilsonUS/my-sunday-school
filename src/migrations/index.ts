@@ -1,10 +1,11 @@
-import * as migration_20260423_125019_phase_2_collections from './20260423_125019_phase_2_collections';
-import * as migration_20260423_144114_schema_media_medium_scripture_richtext from './20260423_144114_schema_media_medium_scripture_richtext';
-import * as migration_20260423_184715_add_collect_to_lessons from './20260423_184715_add_collect_to_lessons';
-import * as migration_20260423_190440_add_musings_and_quote_year from './20260423_190440_add_musings_and_quote_year';
-import * as migration_20260427_071517_musings_as_authored_entries from './20260427_071517_musings_as_authored_entries';
-import * as migration_20260427_142353_add_media_image_sizes from './20260427_142353_add_media_image_sizes';
-import * as migration_20260507_000900_add_source_lectionary_url from './20260507_000900_add_source_lectionary_url';
+import * as migration_20260423_125019_phase_2_collections from './20260423_125019_phase_2_collections'
+import * as migration_20260423_144114_schema_media_medium_scripture_richtext from './20260423_144114_schema_media_medium_scripture_richtext'
+import * as migration_20260423_184715_add_collect_to_lessons from './20260423_184715_add_collect_to_lessons'
+import * as migration_20260423_190440_add_musings_and_quote_year from './20260423_190440_add_musings_and_quote_year'
+import * as migration_20260427_071517_musings_as_authored_entries from './20260427_071517_musings_as_authored_entries'
+import * as migration_20260427_142353_add_media_image_sizes from './20260427_142353_add_media_image_sizes'
+import * as migration_20260507_000900_add_source_lectionary_url from './20260507_000900_add_source_lectionary_url'
+import * as migration_20260529_000900_add_observance_type_to_lessons from './20260529_000900_add_observance_type_to_lessons'
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20260507_000900_add_source_lectionary_url.up,
     down: migration_20260507_000900_add_source_lectionary_url.down,
-    name: '20260507_000900_add_source_lectionary_url'
+    name: '20260507_000900_add_source_lectionary_url',
   },
-];
+  {
+    up: migration_20260529_000900_add_observance_type_to_lessons.up,
+    down: migration_20260529_000900_add_observance_type_to_lessons.down,
+    name: '20260529_000900_add_observance_type_to_lessons',
+  },
+]

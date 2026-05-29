@@ -68,20 +68,16 @@ describe('lesson sync planning', () => {
   })
 
   it('blocks published matches by default', () => {
-    const target = chooseLessonSyncTarget(syncInput, [
-      { ...draftLesson, status: 'published' },
-    ])
+    const target = chooseLessonSyncTarget(syncInput, [{ ...draftLesson, status: 'published' }])
 
     expect(target.action).toBe('blocked-published')
     expect(target.matchReason).toBe('source-url-date')
   })
 
   it('allows published matches only for explicit art-only updates', () => {
-    const target = chooseLessonSyncTarget(
-      syncInput,
-      [{ ...draftLesson, status: 'published' }],
-      { allowPublishedArtUpdate: true },
-    )
+    const target = chooseLessonSyncTarget(syncInput, [{ ...draftLesson, status: 'published' }], {
+      allowPublishedArtUpdate: true,
+    })
 
     expect(target.action).toBe('update-published-art')
     expect(target.matchReason).toBe('source-url-date')
@@ -97,10 +93,29 @@ describe('lesson sync planning', () => {
       collect: 'O God, the King of glory, do not leave us comfortless. Amen.',
       lectionaryYear: 'A',
       liturgicalSeason: 'easter',
+      observanceType: 'sunday',
       slug: '2026-05-10-easter-6a',
       sourceLectionaryUrl: 'https://episcopalchurch.org/lectionary/easter-6a',
       status: 'draft',
       title: 'Known, Near, and Not Orphaned',
+    })
+  })
+
+  it('plans holy day lesson sync data when provided', () => {
+    const data = buildLessonSyncData({
+      ...syncInput,
+      lectionaryYear: undefined,
+      observanceType: 'holy-day',
+      slug: '2026-05-31-the-visitation',
+      sourceUrl: 'https://www.episcopalchurch.org/lectionary/visitation/',
+      title: 'The Visitation of the Blessed Virgin Mary',
+    })
+
+    expect(data).toMatchObject({
+      lectionaryYear: undefined,
+      observanceType: 'holy-day',
+      sourceLectionaryUrl: 'https://episcopalchurch.org/lectionary/visitation',
+      title: 'The Visitation of the Blessed Virgin Mary',
     })
   })
 
@@ -119,8 +134,12 @@ describe('lesson sync planning', () => {
 
     expect(getAltText(artwork)).toBe('Paul stands before a group of listeners in Athens.')
     expect(artwork.medium).toBe('Tapestry cartoon')
-    expect(artwork.description).toBe('Paul meets his listeners where they are before naming the unknown God.')
-    expect(getCaption(artwork)).toBe('Paul meets his listeners where they are before naming the unknown God.')
+    expect(artwork.description).toBe(
+      'Paul meets his listeners where they are before naming the unknown God.',
+    )
+    expect(getCaption(artwork)).toBe(
+      'Paul meets his listeners where they are before naming the unknown God.',
+    )
   })
 
   it('keeps legacy Description-only art links as alt text instead of captions', () => {
@@ -166,7 +185,8 @@ describe('lesson sync artwork rows', () => {
     expect(rows[0]).toEqual({
       id: 'row-1',
       image: 122,
-      caption: 'The apostles and Mary press together beneath a descending dove and tongues of fire.',
+      caption:
+        'The apostles and Mary press together beneath a descending dove and tongues of fire.',
     })
     expect(rows).toHaveLength(2)
   })
@@ -213,9 +233,9 @@ describe('lesson sync artwork filenames', () => {
       ].join('\n'),
     )
 
-    expect(getProposedFilename(artwork, 'image/jpeg', 'https://upload.wikimedia.org/original.png')).toBe(
-      'gustave-dore-the-creation-of-light-1866.jpg',
-    )
+    expect(
+      getProposedFilename(artwork, 'image/jpeg', 'https://upload.wikimedia.org/original.png'),
+    ).toBe('gustave-dore-the-creation-of-light-1866.jpg')
   })
 
   it('can derive the media filename extension from resolved MIME type', () => {
@@ -251,7 +271,9 @@ describe('lesson sync artwork filenames', () => {
 
     expect(artwork.sourceUrl).toBe('https://example.test/source')
     expect(artwork.imageUrl).toBe('https://example.test/small.jpg')
-    expect(artwork.localFilePath).toBe('/Users/sethwilson/dev/garden-mission-control/lessons/runs/easter-6a/_work/verified-images/work.jpg')
+    expect(artwork.localFilePath).toBe(
+      '/Users/sethwilson/dev/garden-mission-control/lessons/runs/easter-6a/_work/verified-images/work.jpg',
+    )
     expect(artwork.alternateImageUrl).toBe('https://example.test/large.jpg')
     expect(artwork.alternateSourceUrl).toBe('https://example.test/large-source')
   })

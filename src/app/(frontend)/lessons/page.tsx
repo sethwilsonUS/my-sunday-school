@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { LessonCard } from '@/components/LessonCard'
 import { SEASON_OPTIONS, type LiturgicalSeason } from '@/lib/liturgical-themes'
 import { getPublishedLessons, type LessonFilters } from '@/lib/lessons'
+import { OBSERVANCE_TYPE_OPTIONS, type ObservanceType } from '@/lib/observance-types'
 import { SITE_NAME, getCanonicalUrl } from '@/lib/share'
 
 const YEAR_OPTIONS = ['A', 'B', 'C'] as const
@@ -12,10 +13,16 @@ export const dynamic = 'force-dynamic'
 
 type SearchParams = {
   season?: string
+  type?: string
   year?: string
 }
 
 const getFilters = (searchParams: SearchParams): LessonFilters => {
+  const observanceType = OBSERVANCE_TYPE_OPTIONS.some(
+    (option) => option.value === searchParams.type,
+  )
+    ? (searchParams.type as ObservanceType)
+    : undefined
   const season = SEASON_OPTIONS.some((option) => option.value === searchParams.season)
     ? (searchParams.season as LiturgicalSeason)
     : undefined
@@ -23,10 +30,11 @@ const getFilters = (searchParams: SearchParams): LessonFilters => {
     ? (searchParams.year as LessonFilters['year'])
     : undefined
 
-  return { season, year }
+  return { observanceType, season, year }
 }
 
-const description = 'Browse published Revised Common Lectionary lessons by liturgical season and lectionary year.'
+const description =
+  'Browse published Revised Common Lectionary lessons by lesson type, liturgical season, and lectionary year.'
 
 export const metadata: Metadata = {
   alternates: {
@@ -56,7 +64,7 @@ export default async function LessonsPage({
   const params = (await searchParams) ?? {}
   const filters = getFilters(params)
   const lessons = await getPublishedLessons(filters)
-  const hasFilters = Boolean(filters.season || filters.year)
+  const hasFilters = Boolean(filters.observanceType || filters.season || filters.year)
 
   return (
     <div className="page-shell">
@@ -64,14 +72,25 @@ export default async function LessonsPage({
         <p className="section-kicker">Lesson archive</p>
         <h1>Published lessons</h1>
         <p>
-          Browse by date, season, or lectionary year. Draft lessons remain private until they are
-          intentionally published.
+          Browse by date, lesson type, season, or lectionary year. Draft lessons remain private
+          until they are intentionally published.
         </p>
       </section>
 
       <form action="/lessons" className="filter-panel">
         <fieldset>
           <legend>Filter lessons</legend>
+          <label>
+            <span>Lesson type</span>
+            <select defaultValue={filters.observanceType ?? ''} name="type">
+              <option value="">All lesson types</option>
+              {OBSERVANCE_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             <span>Season</span>
             <select defaultValue={filters.season ?? ''} name="season">
@@ -123,7 +142,7 @@ export default async function LessonsPage({
         ) : (
           <div className="empty-state">
             <h3>No lessons match those filters</h3>
-            <p>Clear the filters or publish a lesson for this season and year.</p>
+            <p>Clear the filters or publish a lesson for this combination.</p>
           </div>
         )}
       </section>

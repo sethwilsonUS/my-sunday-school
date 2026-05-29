@@ -7,6 +7,7 @@ import { compact, formatLessonDate, getMediaImageSource } from '@/lib/frontend'
 import { splitLessonsForHomepage } from '@/lib/homepage-lessons'
 import { getPublishedLessons } from '@/lib/lessons'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
+import { getLessonDetailLabel } from '@/lib/observance-types'
 import { SITE_TAGLINE, getFirstLessonArtwork } from '@/lib/share'
 
 export const dynamic = 'force-dynamic'
@@ -18,16 +19,15 @@ type SeasonStyle = CSSProperties & {
 
 export default async function HomePage() {
   const lessons = await getPublishedLessons()
-  const { featuredLesson, featuredLessonContext, supportingLessons } = splitLessonsForHomepage(
-    lessons,
-  )
-  const featuredTheme = featuredLesson
-    ? getLiturgicalTheme(featuredLesson.liturgicalSeason)
-    : null
+  const { featuredLesson, featuredLessonContext, supportingLessons } =
+    splitLessonsForHomepage(lessons)
+  const featuredTheme = featuredLesson ? getLiturgicalTheme(featuredLesson.liturgicalSeason) : null
   const featuredArtwork = featuredLesson ? getFirstLessonArtwork(featuredLesson) : null
   const featuredArtworkSource = getMediaImageSource(featuredArtwork, ['card', 'large'])
   const featuredArtworkIsPortrait = Boolean(
-    featuredArtwork?.width && featuredArtwork?.height && featuredArtwork.height > featuredArtwork.width,
+    featuredArtwork?.width &&
+    featuredArtwork?.height &&
+    featuredArtwork.height > featuredArtwork.width,
   )
   const featuredArtworkStyle =
     featuredArtwork?.width && featuredArtwork?.height
@@ -37,10 +37,13 @@ export default async function HomePage() {
       : undefined
   const featuredScriptureCount = compact(featuredLesson?.scriptures).length
   const featuredQuestionCount = compact(featuredLesson?.studyQuestions).length
-  const featuredSectionKicker =
-    featuredLessonContext === 'upcoming' ? 'Upcoming lesson' : 'Featured lesson'
+  const featuredSectionKicker = featuredLessonContext === 'past' ? 'Featured Sunday' : 'Next Sunday'
   const featuredSectionTitle =
-    featuredLessonContext === 'upcoming' ? 'Ready for Sunday' : 'Most recent lesson'
+    featuredLessonContext === 'upcoming'
+      ? 'Ready for Sunday'
+      : featuredLessonContext === 'past'
+        ? 'Most recent Sunday'
+        : 'Sunday lesson'
 
   return (
     <div className="page-shell">
@@ -54,6 +57,9 @@ export default async function HomePage() {
         <div className="hero__actions">
           <Link className="button button--primary" href="/lessons">
             Browse lessons
+          </Link>
+          <Link className="button button--ghost" href="/today">
+            Today&apos;s Lectionary
           </Link>
         </div>
       </section>
@@ -85,9 +91,7 @@ export default async function HomePage() {
                 <Link href={`/lessons/${featuredLesson.slug}`}>{featuredLesson.title}</Link>
               </h3>
               <p className="featured-lesson__details">
-                {featuredLesson.lectionaryYear
-                  ? `Year ${featuredLesson.lectionaryYear}`
-                  : 'Lectionary year not set'}
+                {getLessonDetailLabel(featuredLesson)}
                 <span aria-hidden="true"> · </span>
                 {featuredScriptureCount} {featuredScriptureCount === 1 ? 'scripture' : 'scriptures'}
                 <span aria-hidden="true"> · </span>
@@ -116,8 +120,10 @@ export default async function HomePage() {
           </article>
         ) : (
           <div className="empty-state">
-            <h3>No published lessons yet</h3>
-            <p>Create and publish a lesson in Payload, then it will appear here automatically.</p>
+            <h3>No Sunday lesson published yet</h3>
+            <p>
+              Publish a Sunday lesson in Payload, then the next one will appear here automatically.
+            </p>
           </div>
         )}
       </section>

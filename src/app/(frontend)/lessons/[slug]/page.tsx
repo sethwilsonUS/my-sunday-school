@@ -8,6 +8,7 @@ import { compact, formatLessonDate, getMedia, getMediaImageSource } from '@/lib/
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
 import { getPublishedLessonBySlug } from '@/lib/lessons'
 import { markdownToHTML } from '@/lib/markdown'
+import { getLessonDetailLabel } from '@/lib/observance-types'
 import { richTextToHTML } from '@/lib/richText'
 import {
   LESSON_SOCIAL_IMAGE_ALT,
@@ -128,9 +129,7 @@ export default async function LessonPage({ params }: PageProps) {
         </Link>
         <div className="lesson-hero__meta">
           <span className="season-badge">{theme.label}</span>
-          <span>
-            {lesson.lectionaryYear ? `Year ${lesson.lectionaryYear}` : 'Lectionary year not set'}
-          </span>
+          <span>{getLessonDetailLabel(lesson)}</span>
           <time dateTime={lesson.date}>{formatLessonDate(lesson.date)}</time>
         </div>
         <h1>{lesson.title}</h1>
