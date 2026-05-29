@@ -53,9 +53,10 @@ const legacyLessonSummarySelect = {
   studyQuestions: true,
   title: true,
 } as const
-const legacyLessonDetailSelect = {
+export const legacyLessonDetailSelect = {
   artworks: true,
   collect: true,
+  createdAt: true,
   date: true,
   lectionaryYear: true,
   links: true,
@@ -65,6 +66,7 @@ const legacyLessonDetailSelect = {
   scriptures: true,
   slug: true,
   studyQuestions: true,
+  status: true,
   title: true,
   updatedAt: true,
   videoLinks: true,
@@ -73,7 +75,14 @@ const legacyLessonDetailSelect = {
 export const isMissingObservanceTypeColumn = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)
 
-  return /observance_type/i.test(message) && /column|does not exist|42703/i.test(message)
+  const namesObservanceType =
+    /(?:^|[^.\w])"?observance_type"?\b/i.test(message) ||
+    /\b(?:public\.)?lessons\."?observance_type"?\b/i.test(message)
+  const hasMissingColumnCode = /\b42703\b/.test(message)
+  const hasMissingColumnSignature =
+    /column\s+(?:(?:public\.)?lessons\.)?"?observance_type"?\s+does not exist/i.test(message)
+
+  return hasMissingColumnSignature || (hasMissingColumnCode && namesObservanceType)
 }
 
 const addDefaultObservanceType = <T extends object>(lesson: T) => ({
