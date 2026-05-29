@@ -17,6 +17,7 @@ export function SiteHeader() {
         </span>
       </Link>
       <nav aria-label="Primary navigation" className="site-nav">
+        <Link href="/today">Today</Link>
         <Link href="/lessons">Lessons</Link>
         <ThemeToggle />
       </nav>

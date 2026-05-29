@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { compact, formatShortDate } from '@/lib/frontend'
 import type { LessonSummary } from '@/lib/lessons'
 import { getLiturgicalTheme } from '@/lib/liturgical-themes'
+import { getLessonDetailLabel } from '@/lib/observance-types'
 
 type SeasonStyle = CSSProperties & {
   '--season-accent': string
@@ -33,7 +34,7 @@ export function LessonCard({ lesson }: { lesson: LessonSummary }) {
         <Link href={`/lessons/${lesson.slug}`}>{lesson.title}</Link>
       </h3>
       <p className="lesson-card__details">
-        {lesson.lectionaryYear ? `Year ${lesson.lectionaryYear}` : 'Lectionary year not set'}
+        {getLessonDetailLabel(lesson)}
         <span aria-hidden="true"> · </span>
         {scriptureCount} {scriptureCount === 1 ? 'scripture' : 'scriptures'}
         <span aria-hidden="true"> · </span>

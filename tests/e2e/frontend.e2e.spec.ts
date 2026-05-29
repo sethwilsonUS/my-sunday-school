@@ -22,7 +22,15 @@ test.describe('Frontend', () => {
     )
 
     await expect(page.getByRole('link', { name: 'Browse lessons' })).toBeVisible()
+    await expect(page.getByRole('link', { name: "Today's Lectionary" })).toBeVisible()
     await expect(page.getByRole('link', { exact: true, name: 'Open admin' })).toHaveCount(0)
     await expect(page.getByRole('link', { exact: true, name: 'Admin' })).toHaveCount(0)
+  })
+
+  test('can visit the today page', async ({ page }) => {
+    await page.goto(`${serverURL}/today`)
+
+    await expect(page.getByRole('heading', { level: 1, name: "Today's Lectionary" })).toBeVisible()
+    await expect(page.getByText('Central Time')).toBeVisible()
   })
 })

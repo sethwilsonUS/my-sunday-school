@@ -7,7 +7,10 @@ export function LessonsListIntro() {
           Draft, review, then publish
         </h2>
         <ol className="admin-branding__steps">
-          <li>Start with the Overview tab so title, date, season, and status are settled first.</li>
+          <li>
+            Start with the Overview tab so title, date, lesson type, season, and status are settled
+            first.
+          </li>
           <li>Add scripture, questions, musings, and supporting media in the remaining tabs.</li>
           <li>Only lessons marked published appear on the public site.</li>
         </ol>

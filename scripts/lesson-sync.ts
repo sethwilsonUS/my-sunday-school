@@ -19,9 +19,11 @@ import {
   type ArtworkLink,
   type DownloadedArtwork,
   type ExistingLessonForSync,
+  type ObservanceType,
   type LiturgicalSeasonValue,
   type LessonSyncInput,
 } from './lesson-sync-helpers'
+import { parseObservanceType } from '../src/lib/observance-types'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -36,6 +38,7 @@ type Options = {
   date?: string
   help: boolean
   lectionaryYear?: 'A' | 'B' | 'C'
+  observanceType?: ObservanceType
   replaceExistingArt: boolean
   season?: string
   slug?: string
@@ -55,6 +58,7 @@ type MediaMatch = {
 
 const usage = `Usage:
   pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --allow-published-art --replace-existing-art
+  pnpm lesson:sync -- --date 2026-05-31 --title "The Visitation of the Blessed Virgin Mary" --season easter --type holy-day --slug 2026-05-31-the-visitation --source-url https://www.episcopalchurch.org/lectionary/visitation/ --collect "Father in heaven..."
   pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --allow-published-art --replace-existing-art
 
 Default mode is a dry run. Write mode requires --write and --confirm-shared-db. Matching is by sourceLectionaryUrl + date first, then slug. Published matches are blocked by default; --allow-published-art permits an art-only append/replace when --art-links is present.
@@ -71,7 +75,13 @@ function readFlagValue(args: string[], index: number, flag: string) {
 }
 
 function parseArgs(args: string[]): Options {
-  const options: Options = { allowPublishedArt: false, confirmSharedDB: false, help: false, replaceExistingArt: false, write: false }
+  const options: Options = {
+    allowPublishedArt: false,
+    confirmSharedDB: false,
+    help: false,
+    replaceExistingArt: false,
+    write: false,
+  }
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
@@ -105,6 +115,10 @@ function parseArgs(args: string[]): Options {
         break
       case '--replace-existing-art':
         options.replaceExistingArt = true
+        break
+      case '--observance-type':
+      case '--type':
+        options.observanceType = parseObservanceType(getValue())
         break
       case '--season':
         options.season = getValue()
@@ -182,6 +196,7 @@ function optionsToSyncInput(options: Options): LessonSyncInput {
     date,
     lectionaryYear: options.lectionaryYear,
     liturgicalSeason,
+    observanceType: options.observanceType,
     slug,
     sourceUrl: options.sourceUrl,
     title,
@@ -236,7 +251,10 @@ async function findLessonCandidates(payload: Payload, input: LessonSyncInput) {
   return [...candidates.values()]
 }
 
-async function findExistingMedia(payload: Payload, artwork: DownloadedArtwork): Promise<MediaMatch | null> {
+async function findExistingMedia(
+  payload: Payload,
+  artwork: DownloadedArtwork,
+): Promise<MediaMatch | null> {
   const filenameMatches = await payload.find({
     collection: 'media',
     depth: 0,
@@ -245,7 +263,10 @@ async function findExistingMedia(payload: Payload, artwork: DownloadedArtwork): 
   })
 
   if (filenameMatches.docs[0]) {
-    return { media: filenameMatches.docs[0], reason: `filename matches ${artwork.proposedFilename}` }
+    return {
+      media: filenameMatches.docs[0],
+      reason: `filename matches ${artwork.proposedFilename}`,
+    }
   }
 
   return findExistingMediaBySource(payload, artwork)
@@ -275,7 +296,10 @@ async function findExistingMediaBySource(
     })
 
     if (alternateSourceMatches.docs[0]) {
-      return { media: alternateSourceMatches.docs[0], reason: `alternate source URL matches ${artwork.alternateSourceUrl}` }
+      return {
+        media: alternateSourceMatches.docs[0],
+        reason: `alternate source URL matches ${artwork.alternateSourceUrl}`,
+      }
     }
   }
 
@@ -324,7 +348,9 @@ async function syncArtwork({
   }
 
   const existingArtworkRows = existingLesson?.artworks ?? []
-  const attachmentRows: NonNullable<Lesson['artworks']> = replaceExistingArt ? [] : [...existingArtworkRows]
+  const attachmentRows: NonNullable<Lesson['artworks']> = replaceExistingArt
+    ? []
+    : [...existingArtworkRows]
   let mediaRecordsCreated = 0
   let mediaRecordsPlanned = 0
   let lessonArtworkRowsAdded = 0
@@ -332,7 +358,9 @@ async function syncArtwork({
   let lessonArtworkRowsUpdated = 0
 
   console.log(`Art links: ${artLinksPath}`)
-  console.log(`Artwork row mode: ${replaceExistingArt ? 'replace existing lesson artwork rows' : 'append missing artwork rows'}`)
+  console.log(
+    `Artwork row mode: ${replaceExistingArt ? 'replace existing lesson artwork rows' : 'append missing artwork rows'}`,
+  )
   console.log(`Parsed artworks: ${artworks.length}\n`)
 
   for (const [index, artwork] of artworks.entries()) {
@@ -356,14 +384,20 @@ async function syncArtwork({
 
       if (downloaded.resolvedImageUrl && downloaded.resolvedImageUrl !== downloaded.imageUrl) {
         console.log(`  resolved upload: ${downloaded.resolvedImageUrl}`)
-        console.log(`  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`)
+        console.log(
+          `  resolved reason: ${downloaded.resolvedImageReason ?? 'best validated candidate'}`,
+        )
       }
 
       if (downloaded.resolvedImageSize) {
-        console.log(`  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`)
+        console.log(
+          `  resolved dimensions: ${downloaded.resolvedImageSize.width}x${downloaded.resolvedImageSize.height}`,
+        )
       }
 
-      console.log(`  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}`)
+      console.log(
+        `  downloaded: ${downloaded.mimeType}, ${downloaded.contentLength.toLocaleString()} bytes, sha256 ${downloaded.hash.slice(0, 12)}`,
+      )
       console.log(`  proposed filename: ${downloaded.proposedFilename}`)
 
       if (existingMedia) {
@@ -402,7 +436,11 @@ async function syncArtwork({
         }
       } else if (rowChange === 'updated') {
         lessonArtworkRowsUpdated += 1
-        console.log(write ? '  lesson: updated existing artwork caption' : '  lesson: would update existing artwork caption')
+        console.log(
+          write
+            ? '  lesson: updated existing artwork caption'
+            : '  lesson: would update existing artwork caption',
+        )
       } else {
         console.log('  lesson: already queued in target artwork rows with current caption')
       }
@@ -434,7 +472,9 @@ async function main() {
   const lessonData = buildLessonSyncData(input)
   const lessonUrl = `https://lectionarylessons.org/lessons/${input.slug}`
 
-  console.log(options.write ? 'Running lesson sync in WRITE mode.' : 'Running lesson sync as a dry run.')
+  console.log(
+    options.write ? 'Running lesson sync in WRITE mode.' : 'Running lesson sync as a dry run.',
+  )
   console.log(`Lesson slug: ${input.slug}`)
   console.log(`Source lectionary URL: ${lessonData.sourceLectionaryUrl ?? 'not provided'}`)
   console.log(`Future/public URL after publish: ${lessonUrl}`)
@@ -457,12 +497,18 @@ async function main() {
     })
 
     if (target.action === 'blocked-published') {
-      console.log(`Matched published lesson by ${target.matchReason}: ${target.lesson.title} (id ${target.lesson.id})`)
-      throw new Error('Matching lesson is published; refusing to update without --allow-published-art and --art-links.')
+      console.log(
+        `Matched published lesson by ${target.matchReason}: ${target.lesson.title} (id ${target.lesson.id})`,
+      )
+      throw new Error(
+        'Matching lesson is published; refusing to update without --allow-published-art and --art-links.',
+      )
     }
 
     if (target.action === 'update-published-art') {
-      console.log('Planned lesson metadata: skipped because --allow-published-art is art-only for published lessons.')
+      console.log(
+        'Planned lesson metadata: skipped because --allow-published-art is art-only for published lessons.',
+      )
       console.log('')
     } else {
       console.log('Planned lesson metadata:')
@@ -474,41 +520,53 @@ async function main() {
 
     if (target.action === 'create-draft') {
       console.log('Lesson match: none found.')
-      console.log(options.write ? 'Action: create draft lesson.' : 'Action: would create draft lesson.')
+      console.log(
+        options.write ? 'Action: create draft lesson.' : 'Action: would create draft lesson.',
+      )
 
       if (options.write) {
-        lesson = await payload.create({
+        lesson = (await payload.create({
           collection: 'lessons',
           data: lessonData,
           depth: 2,
           overrideAccess: true,
-        }) as LessonWithSource
+        })) as LessonWithSource
         console.log(`Created draft lesson: ${lesson.title}`)
       }
     } else if (target.action === 'update-draft') {
       lesson = target.lesson as LessonWithSource
-      console.log(`Lesson match: ${target.matchReason} -> ${lesson.title} (id ${lesson.id}, status ${lesson.status})`)
-      console.log(options.write ? 'Action: update draft lesson metadata.' : 'Action: would update draft lesson metadata.')
+      console.log(
+        `Lesson match: ${target.matchReason} -> ${lesson.title} (id ${lesson.id}, status ${lesson.status})`,
+      )
+      console.log(
+        options.write
+          ? 'Action: update draft lesson metadata.'
+          : 'Action: would update draft lesson metadata.',
+      )
 
       if (options.write) {
-        lesson = await payload.update({
+        lesson = (await payload.update({
           collection: 'lessons',
           data: lessonData,
           depth: 2,
           id: lesson.id,
           overrideAccess: true,
-        }) as LessonWithSource
+        })) as LessonWithSource
         console.log(`Updated draft lesson: ${lesson.title}`)
       }
     } else {
       lesson = target.lesson as LessonWithSource
-      console.log(`Lesson match: ${target.matchReason} -> ${lesson.title} (id ${lesson.id}, status ${lesson.status})`)
-      console.log(options.write ? 'Action: update published lesson artwork only.' : 'Action: would update published lesson artwork only.')
+      console.log(
+        `Lesson match: ${target.matchReason} -> ${lesson.title} (id ${lesson.id}, status ${lesson.status})`,
+      )
+      console.log(
+        options.write
+          ? 'Action: update published lesson artwork only.'
+          : 'Action: would update published lesson artwork only.',
+      )
     }
 
-    let artworkSummary:
-      | Awaited<ReturnType<typeof syncArtwork>>
-      | undefined
+    let artworkSummary: Awaited<ReturnType<typeof syncArtwork>> | undefined
 
     if (options.artLinksPath) {
       artworkSummary = await syncArtwork({
@@ -546,8 +604,12 @@ async function main() {
       } else {
         console.log(`Would upload new media records: ${artworkSummary.mediaRecordsPlanned}`)
         console.log(`Would add lesson artwork rows: ${artworkSummary.lessonArtworkRowsPlanned}`)
-        console.log(`Would update lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`)
-        console.log(`Would set final lesson artwork rows to: ${artworkSummary.finalArtworkRowCount}`)
+        console.log(
+          `Would update lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`,
+        )
+        console.log(
+          `Would set final lesson artwork rows to: ${artworkSummary.finalArtworkRowCount}`,
+        )
         console.log('No Payload writes were made.')
       }
     } else {

@@ -46,6 +46,7 @@ const auditLesson = {
   date: '2026-04-23',
   lectionaryYear: 'C',
   liturgicalSeason: 'easter',
+  observanceType: 'sunday',
   musings: [
     {
       author: 'Seth Wilson',
@@ -209,6 +210,7 @@ const seedAuditData = async () => {
       lectionaryYear: auditLesson.lectionaryYear,
       liturgicalSeason: auditLesson.liturgicalSeason,
       musings: auditLesson.musings.map((musing) => ({ ...musing })),
+      observanceType: auditLesson.observanceType,
       slug: auditLesson.slug,
       status: auditLesson.status,
       studyQuestions: auditLesson.studyQuestions.map((question) => ({ ...question })),

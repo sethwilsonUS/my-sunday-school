@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isAdmin, isAdminField, publishedOrAdmin } from '../access'
 import { SEASON_OPTIONS } from '../lib/liturgical-themes'
+import { OBSERVANCE_TYPE_OPTIONS } from '../lib/observance-types'
 
 const slugify = (value: string): string =>
   value
@@ -27,9 +28,9 @@ export const Lessons: CollectionConfig = {
       },
     },
     description:
-      'Build weekly lessons here. Scripture, musings, and quotes live in Content; artwork and links live in Media & Links. Only published lessons appear on the public site.',
+      'Build lectionary lessons here. Scripture, musings, and quotes live in Content; artwork and links live in Media & Links. Only published lessons appear on the public site.',
     useAsTitle: 'title',
-    defaultColumns: ['title', 'date', 'liturgicalSeason', 'status'],
+    defaultColumns: ['title', 'date', 'observanceType', 'liturgicalSeason', 'status'],
   },
   hooks: {
     beforeValidate: [
@@ -55,7 +56,7 @@ export const Lessons: CollectionConfig = {
               type: 'text',
               required: true,
               admin: {
-                placeholder: 'Third Sunday of Easter',
+                placeholder: 'Third Sunday of Easter or The Visitation',
               },
             },
             {
@@ -86,6 +87,15 @@ export const Lessons: CollectionConfig = {
                   type: 'date',
                   required: true,
                   label: 'Lesson Date',
+                },
+                {
+                  name: 'observanceType',
+                  type: 'select',
+                  defaultValue: 'sunday',
+                  index: true,
+                  label: 'Lesson Type',
+                  options: [...OBSERVANCE_TYPE_OPTIONS],
+                  required: true,
                 },
                 {
                   name: 'liturgicalSeason',

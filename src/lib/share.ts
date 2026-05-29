@@ -3,6 +3,7 @@ import type { Lesson, Media } from '@/payload-types'
 import { compact, getMedia, getMediaImageSource } from './frontend'
 import { formatLessonDate } from './frontend'
 import { getLiturgicalTheme } from './liturgical-themes'
+import { getLessonDetailLabel } from './observance-types'
 
 export const SITE_NAME = 'Lectionary Lessons'
 export const SITE_SUBTITLE = 'Revised Common Lectionary'
@@ -88,12 +89,16 @@ export const getLessonOpenGraphUrl = (slug: string, version?: string | null) => 
 }
 
 export const getLessonMetadataLabel = (
-  lesson: Pick<Lesson, 'date' | 'lectionaryYear' | 'liturgicalSeason'>,
+  lesson: Pick<Lesson, 'date' | 'lectionaryYear' | 'liturgicalSeason' | 'observanceType'>,
 ) => {
   const seasonLabel = getLiturgicalTheme(lesson.liturgicalSeason).label
-  const yearLabel = lesson.lectionaryYear ? ` Year ${lesson.lectionaryYear}` : ''
+  const detailLabel = getLessonDetailLabel(lesson)
 
-  return `${seasonLabel}${yearLabel}, ${formatLessonDate(lesson.date)}`
+  if ((lesson.observanceType ?? 'sunday') === 'sunday' && lesson.lectionaryYear) {
+    return `${seasonLabel} ${detailLabel}, ${formatLessonDate(lesson.date)}`
+  }
+
+  return `${detailLabel}, ${seasonLabel}, ${formatLessonDate(lesson.date)}`
 }
 
 export const getFirstLessonArtwork = (lesson: Pick<Lesson, 'artworks'>): Media | null => {

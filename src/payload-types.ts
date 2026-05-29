@@ -207,7 +207,7 @@ export interface Media {
   };
 }
 /**
- * Build weekly lessons here. Scripture, musings, and quotes live in Content; artwork and links live in Media & Links. Only published lessons appear on the public site.
+ * Build lectionary lessons here. Scripture, musings, and quotes live in Content; artwork and links live in Media & Links. Only published lessons appear on the public site.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "lessons".
@@ -224,6 +224,7 @@ export interface Lesson {
    */
   sourceLectionaryUrl?: string | null;
   date: string;
+  observanceType: 'sunday' | 'holy-day' | 'commemoration' | 'other';
   liturgicalSeason:
     | 'advent'
     | 'christmas'
@@ -524,6 +525,7 @@ export interface LessonsSelect<T extends boolean = true> {
   slug?: T;
   sourceLectionaryUrl?: T;
   date?: T;
+  observanceType?: T;
   liturgicalSeason?: T;
   lectionaryYear?: T;
   status?: T;

@@ -9,7 +9,7 @@ export function DashboardStartHere() {
           Keep the editorial flow calm
         </h2>
         <p className="admin-branding__body">
-          Begin in Lessons for weekly content, or jump into Media when you need artwork,
+          Begin in Lessons for lectionary content, or jump into Media when you need artwork,
           attribution, and alt text squared away.
         </p>
       </div>
@@ -22,8 +22,8 @@ export function DashboardStartHere() {
         </Link>
       </div>
       <p className="admin-branding__meta">
-        Published lessons appear on the public site. Drafts stay tucked away in the admin until
-        you are ready.
+        Published lessons appear on the public site. Drafts stay tucked away in the admin until you
+        are ready.
       </p>
     </section>
   )

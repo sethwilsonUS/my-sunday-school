@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import type { Lesson, Media } from '@/payload-types'
-import { getFirstLessonArtworkUrl, getLessonOpenGraphPath, getLessonOpenGraphUrl } from '@/lib/share'
+import {
+  getFirstLessonArtworkUrl,
+  getLessonMetadataLabel,
+  getLessonOpenGraphPath,
+  getLessonOpenGraphUrl,
+} from '@/lib/share'
 
 const makeMedia = (overrides: Partial<Media>): Media => ({
   altText: 'Test artwork',
@@ -86,5 +91,29 @@ describe('lesson Open Graph image URLs', () => {
     const url = getLessonOpenGraphUrl('pentecost', 'manual/refresh')
 
     expect(url).toContain('/lessons/pentecost/opengraph-image/manual%2Frefresh.png')
+  })
+})
+
+describe('lesson metadata labels', () => {
+  it('uses observance labels for non-Sunday lessons without lectionary years', () => {
+    expect(
+      getLessonMetadataLabel({
+        date: '2026-05-31',
+        lectionaryYear: null,
+        liturgicalSeason: 'easter',
+        observanceType: 'holy-day',
+      }),
+    ).toBe('Holy Day, Easter, May 31, 2026')
+  })
+
+  it('keeps Sunday year labels when a lectionary year is present', () => {
+    expect(
+      getLessonMetadataLabel({
+        date: '2026-06-07',
+        lectionaryYear: 'C',
+        liturgicalSeason: 'pentecost',
+        observanceType: 'sunday',
+      }),
+    ).toBe('Pentecost Year C, June 7, 2026')
   })
 })
