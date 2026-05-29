@@ -21,13 +21,23 @@ export function getCentralDateKey(value: Date = new Date()) {
 }
 
 export function getNextDateKey(dateKey: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    throw new Error(`Invalid date key: ${dateKey}`)
+  }
+
   const [year, month, day] = dateKey.split('-').map(Number)
 
   if (!year || !month || !day) {
     throw new Error(`Invalid date key: ${dateKey}`)
   }
 
-  const nextDate = new Date(Date.UTC(year, month - 1, day + 1))
+  const date = new Date(Date.UTC(year, month - 1, day))
 
-  return nextDate.toISOString().slice(0, 10)
+  if (date.toISOString().slice(0, 10) !== dateKey) {
+    throw new Error(`Invalid date key: ${dateKey}`)
+  }
+
+  date.setUTCDate(date.getUTCDate() + 1)
+
+  return date.toISOString().slice(0, 10)
 }

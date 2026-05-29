@@ -11,4 +11,9 @@ describe('lesson date helpers', () => {
   it('calculates the next calendar date key without timezone drift', () => {
     expect(getNextDateKey('2026-05-31')).toBe('2026-06-01')
   })
+
+  it('rejects non-canonical date keys instead of rolling them forward', () => {
+    expect(() => getNextDateKey('2026-02-31')).toThrow('Invalid date key: 2026-02-31')
+    expect(() => getNextDateKey('2026-2-03')).toThrow('Invalid date key: 2026-2-03')
+  })
 })
