@@ -48,7 +48,10 @@ export function normalizeCommonsFileTitle(value: string | undefined) {
   }
 }
 
-export function candidateIsMateriallyBetter(current: ImageDimensions | undefined, candidate: ImageDimensions) {
+export function candidateIsMateriallyBetter(
+  current: ImageDimensions | undefined,
+  candidate: ImageDimensions,
+) {
   if (!current?.width || !current.height) {
     return true
   }
@@ -72,7 +75,9 @@ export function candidateIsMateriallyBetter(current: ImageDimensions | undefined
 
 export function chooseBestValidatedCandidate(candidates: ValidatedArtImageCandidate[]) {
   return [...candidates].sort((left, right) => {
-    const areaDelta = right.dimensions.width * right.dimensions.height - left.dimensions.width * left.dimensions.height
+    const areaDelta =
+      right.dimensions.width * right.dimensions.height -
+      left.dimensions.width * left.dimensions.height
 
     if (areaDelta !== 0) {
       return areaDelta
@@ -156,6 +161,7 @@ const DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
 const DEFAULT_MAX_RETRY_DELAY_MS = 30000
 const DEFAULT_MAX_SOURCE_PAGE_BYTES = 2_000_000
 const DEFAULT_RETRY_DELAY_MS = 5000
+const COMMONS_THUMB_WIDTH = 4096
 const MAX_REDIRECTS = 5
 
 export async function resolveArtworkImage(
@@ -165,18 +171,24 @@ export async function resolveArtworkImage(
   const fetchFn = options.fetchFn ?? fetch
   const failures: string[] = []
   const providedImageUrl = input.imageUrl?.trim() || undefined
-  const localCandidate = await validateLocalImageCandidate(input.localFilePath, options).catch((error: unknown) => {
-    if (input.localFilePath?.trim()) {
-      failures.push(`${input.localFilePath.trim()}: ${error instanceof Error ? error.message : String(error)}`)
-    }
+  const localCandidate = await validateLocalImageCandidate(input.localFilePath, options).catch(
+    (error: unknown) => {
+      if (input.localFilePath?.trim()) {
+        failures.push(
+          `${input.localFilePath.trim()}: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
 
-    return undefined
-  })
+      return undefined
+    },
+  )
 
   if (localCandidate) {
     return {
       ...localCandidate,
-      changedFromProvided: Boolean(providedImageUrl) && normalizeUrl(localCandidate.url) !== normalizeUrl(providedImageUrl),
+      changedFromProvided:
+        Boolean(providedImageUrl) &&
+        normalizeUrl(localCandidate.url) !== normalizeUrl(providedImageUrl),
       failures,
       providedImageUrl,
       sha256: crypto.createHash('sha256').update(localCandidate.buffer).digest('hex'),
@@ -187,11 +199,13 @@ export async function resolveArtworkImage(
   const validated: ValidatedArtImageCandidate[] = []
 
   for (const candidate of uniqueCandidateHints(candidates)) {
-    const result = await validateCandidate(candidate, { ...options, fetchFn }).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error)
-      failures.push(`${candidate.url}: ${message}`)
-      return null
-    })
+    const result = await validateCandidate(candidate, { ...options, fetchFn }).catch(
+      (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error)
+        failures.push(`${candidate.url}: ${message}`)
+        return null
+      },
+    )
 
     if (result) {
       validated.push(result)
@@ -206,7 +220,8 @@ export async function resolveArtworkImage(
 
   return {
     ...chosen,
-    changedFromProvided: Boolean(providedImageUrl) && normalizeUrl(chosen.url) !== normalizeUrl(providedImageUrl),
+    changedFromProvided:
+      Boolean(providedImageUrl) && normalizeUrl(chosen.url) !== normalizeUrl(providedImageUrl),
     failures,
     providedImageUrl,
     sha256: crypto.createHash('sha256').update(chosen.buffer).digest('hex'),
@@ -222,7 +237,13 @@ async function collectCandidateHints(
 
   await addCandidate(candidates, input.imageUrl, 'provided image URL', options, failures)
   await addCandidate(candidates, input.alternateImageUrl, 'alternate image URL', options, failures)
-  await addCandidate(candidates, getDirectImageUrl(input.sourceUrl ?? undefined), 'source image URL', options, failures)
+  await addCandidate(
+    candidates,
+    getDirectImageUrl(input.sourceUrl ?? undefined),
+    'source image URL',
+    options,
+    failures,
+  )
   await addCandidate(
     candidates,
     getDirectImageUrl(input.alternateSourceUrl ?? undefined),
@@ -231,12 +252,26 @@ async function collectCandidateHints(
     failures,
   )
 
-  for (const sourceUrl of [input.sourceUrl, input.alternateSourceUrl, input.imageUrl, input.alternateImageUrl]) {
+  for (const sourceUrl of [
+    input.sourceUrl,
+    input.alternateSourceUrl,
+    input.imageUrl,
+    input.alternateImageUrl,
+  ]) {
     const fileTitle = normalizeCommonsFileTitle(sourceUrl ?? undefined)
 
     if (fileTitle) {
-      const commonsUrl = await fetchCommonsOriginal(fileTitle, options, failures)
-      await addCandidate(candidates, commonsUrl, `Commons API original for ${fileTitle}`, options, failures)
+      const commonsCandidates = await fetchCommonsImageCandidates(fileTitle, options, failures)
+
+      for (const commonsCandidate of commonsCandidates) {
+        await addCandidate(
+          candidates,
+          commonsCandidate.url,
+          commonsCandidate.reason,
+          options,
+          failures,
+        )
+      }
     }
   }
 
@@ -250,7 +285,13 @@ async function collectCandidateHints(
     )
 
     const metadataImage = await fetchSourcePageImage(sourceUrl ?? undefined, options, failures)
-    await addCandidate(candidates, metadataImage, `source-page metadata for ${sourceUrl}`, options, failures)
+    await addCandidate(
+      candidates,
+      metadataImage,
+      `source-page metadata for ${sourceUrl}`,
+      options,
+      failures,
+    )
   }
 
   return candidates
@@ -269,10 +310,12 @@ async function addCandidate(
     return
   }
 
-  const validatedUrl = await validateExternalHttpUrl(normalized, options).catch((error: unknown) => {
-    failures.push(`${normalized}: ${error instanceof Error ? error.message : String(error)}`)
-    return undefined
-  })
+  const validatedUrl = await validateExternalHttpUrl(normalized, options).catch(
+    (error: unknown) => {
+      failures.push(`${normalized}: ${error instanceof Error ? error.message : String(error)}`)
+      return undefined
+    },
+  )
 
   if (validatedUrl) {
     candidates.push({ reason, url: validatedUrl })
@@ -306,7 +349,9 @@ async function validateLocalImageCandidate(
     throw new Error(`local image exceeds maximum size ${maxBytes.toLocaleString()} bytes`)
   }
 
-  const metadata = await sharp(buffer, { limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS }).metadata()
+  const metadata = await sharp(buffer, {
+    limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS,
+  }).metadata()
   const mimeType = mimeTypeFromSharpMetadata(metadata.format, metadata.compression) ?? 'image/jpeg'
 
   if (!metadata.width || !metadata.height) {
@@ -361,7 +406,9 @@ function uniqueCandidateHints(candidates: CandidateHint[]) {
 }
 
 function choosePreferredCandidate(candidates: ValidatedArtImageCandidate[]) {
-  const primaryCandidates = candidates.filter((candidate) => !candidate.reason.startsWith('source-page metadata'))
+  const primaryCandidates = candidates.filter(
+    (candidate) => !candidate.reason.startsWith('source-page metadata'),
+  )
 
   return chooseBestValidatedCandidate(primaryCandidates.length > 0 ? primaryCandidates : candidates)
 }
@@ -386,7 +433,9 @@ function getDirectImageUrl(value: string | undefined) {
       return undefined
     }
 
-    return /\.(?:avif|jpe?g|png|gif|svg|webp|heic|heif|tiff?)$/i.test(url.pathname) ? url.toString() : undefined
+    return /\.(?:avif|jpe?g|png|gif|svg|webp|heic|heif|tiff?)$/i.test(url.pathname)
+      ? url.toString()
+      : undefined
   } catch {
     return undefined
   }
@@ -408,9 +457,7 @@ function getWgaImageUrl(sourceUrl: string | undefined) {
       return undefined
     }
 
-    const imagePath = url.pathname
-      .replace(/^\/html_m\//, '/art/')
-      .replace(/^\/html\//, '/art/')
+    const imagePath = url.pathname.replace(/^\/html_m\//, '/art/').replace(/^\/html\//, '/art/')
 
     if (imagePath === url.pathname) {
       return undefined
@@ -425,7 +472,34 @@ function getWgaImageUrl(sourceUrl: string | undefined) {
   }
 }
 
-async function fetchCommonsOriginal(
+async function fetchCommonsImageCandidates(
+  fileTitle: string,
+  options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
+  failures: string[],
+): Promise<CandidateHint[]> {
+  const imageInfo = await fetchCommonsImageInfo(fileTitle, options, failures)
+
+  if (!imageInfo) {
+    return []
+  }
+
+  return [
+    imageInfo.originalUrl
+      ? {
+          reason: `Commons API original for ${fileTitle}`,
+          url: imageInfo.originalUrl,
+        }
+      : undefined,
+    imageInfo.thumbnailUrl
+      ? {
+          reason: `Commons API thumbnail for ${fileTitle}`,
+          url: imageInfo.thumbnailUrl,
+        }
+      : undefined,
+  ].filter((candidate): candidate is CandidateHint => Boolean(candidate))
+}
+
+async function fetchCommonsImageInfo(
   fileTitle: string,
   options: Required<Pick<ResolveArtworkImageOptions, 'fetchFn'>> & ResolveArtworkImageOptions,
   failures: string[],
@@ -433,6 +507,7 @@ async function fetchCommonsOriginal(
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
+    iiurlwidth: String(COMMONS_THUMB_WIDTH),
     iiprop: 'url|size|mime|sha1',
     prop: 'imageinfo',
     titles: `File:${fileTitle}`,
@@ -451,7 +526,9 @@ async function fetchCommonsOriginal(
   }
 
   const data = (await response.json().catch((error: unknown) => {
-    failures.push(`${url}: Commons JSON parse failed: ${error instanceof Error ? error.message : String(error)}`)
+    failures.push(
+      `${url}: Commons JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
     return null
   })) as unknown
 
@@ -480,6 +557,7 @@ async function fetchCommonsOriginal(
 
     const imageUrl = stringValue(page.imageinfo[0].url)
     const mime = stringValue(page.imageinfo[0].mime)
+    const thumbnailUrl = stringValue(page.imageinfo[0].thumburl)
 
     if (!imageUrl) {
       failures.push(`${failureContext} did not include an image URL`)
@@ -492,12 +570,29 @@ async function fetchCommonsOriginal(
     }
 
     if (imageUrl && mime?.startsWith('image/')) {
-      return await validateExternalHttpUrl(imageUrl, options).catch((error: unknown) => {
-        failures.push(
-          `${failureContext} returned an unsafe image URL: ${error instanceof Error ? error.message : String(error)}`,
-        )
-        return undefined
-      })
+      const originalUrl = await validateExternalHttpUrl(imageUrl, options).catch(
+        (error: unknown) => {
+          failures.push(
+            `${failureContext} returned an unsafe image URL: ${error instanceof Error ? error.message : String(error)}`,
+          )
+          return undefined
+        },
+      )
+      const safeThumbnailUrl = thumbnailUrl
+        ? await validateExternalHttpUrl(thumbnailUrl, options).catch((error: unknown) => {
+            failures.push(
+              `${failureContext} returned an unsafe thumbnail URL: ${error instanceof Error ? error.message : String(error)}`,
+            )
+            return undefined
+          })
+        : undefined
+
+      if (originalUrl || safeThumbnailUrl) {
+        return {
+          originalUrl,
+          thumbnailUrl: safeThumbnailUrl,
+        }
+      }
     }
 
     failures.push(`${failureContext} returned non-image MIME ${mime}`)
@@ -529,7 +624,9 @@ async function fetchSourcePageImage(
     options.maxSourcePageBytes ?? DEFAULT_MAX_SOURCE_PAGE_BYTES,
     'source page',
   ).catch((error: unknown) => {
-    failures.push(`${sourceUrl}: source page read failed: ${error instanceof Error ? error.message : String(error)}`)
+    failures.push(
+      `${sourceUrl}: source page read failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
     return undefined
   })
 
@@ -555,7 +652,9 @@ async function fetchSourcePageImage(
     const metadataUrl = new URL(decodeHtmlEntities(raw), sourceUrl).toString()
     return await validateExternalHttpUrl(metadataUrl, options)
   } catch (error: unknown) {
-    failures.push(`${sourceUrl}: invalid source-page metadata URL: ${error instanceof Error ? error.message : String(error)}`)
+    failures.push(
+      `${sourceUrl}: invalid source-page metadata URL: ${error instanceof Error ? error.message : String(error)}`,
+    )
     return undefined
   }
 }
@@ -572,13 +671,22 @@ async function validateCandidate(
 
   const headerMimeType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()
 
-  if (headerMimeType && !headerMimeType.startsWith('image/') && headerMimeType !== 'application/octet-stream') {
+  if (
+    headerMimeType &&
+    !headerMimeType.startsWith('image/') &&
+    headerMimeType !== 'application/octet-stream'
+  ) {
     throw new Error(`expected image/* but got ${headerMimeType}`)
   }
 
   const buffer = await readResponseBuffer(response, options.maxBytes ?? DEFAULT_MAX_IMAGE_BYTES)
-  const metadata = await sharp(buffer, { limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS }).metadata()
-  const mimeType = mimeTypeFromSharpMetadata(metadata.format, metadata.compression) ?? headerMimeType ?? 'image/jpeg'
+  const metadata = await sharp(buffer, {
+    limitInputPixels: options.maxPixels ?? DEFAULT_MAX_IMAGE_PIXELS,
+  }).metadata()
+  const mimeType =
+    mimeTypeFromSharpMetadata(metadata.format, metadata.compression) ??
+    headerMimeType ??
+    'image/jpeg'
 
   if (!metadata.width || !metadata.height) {
     throw new Error('image dimensions could not be read')
@@ -784,8 +892,11 @@ async function waitForRetry(
   attempt: number,
   options: ResolveArtworkImageOptions,
 ) {
-  const retryAfterMs = response ? retryAfterHeaderMs(response.headers.get('retry-after')) : undefined
-  const uncappedDelayMs = retryAfterMs ?? (options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS) * (attempt + 1)
+  const retryAfterMs = response
+    ? retryAfterHeaderMs(response.headers.get('retry-after'))
+    : undefined
+  const uncappedDelayMs =
+    retryAfterMs ?? (options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS) * (attempt + 1)
   const delayMs = Math.min(uncappedDelayMs, options.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS)
 
   if (delayMs <= 0) {
@@ -895,7 +1006,8 @@ function mimeTypeFromSharpMetadata(format: string | undefined, compression: stri
 
 function resolverHeaders() {
   return {
-    accept: 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.9,text/html,application/json;q=0.8,*/*;q=0.5',
+    accept:
+      'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.9,text/html,application/json;q=0.8,*/*;q=0.5',
     'user-agent': 'my-sunday-school-art-source-resolver/1.0',
   }
 }
@@ -915,7 +1027,11 @@ function normalizeUrl(value: string | undefined) {
 }
 
 function decodeHtmlEntities(value: string) {
-  return value.replace(/&amp;/g, '&').replace(/&#x2F;/gi, '/').replace(/&#47;/g, '/').trim()
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&#47;/g, '/')
+    .trim()
 }
 
 function stringValue(value: unknown) {

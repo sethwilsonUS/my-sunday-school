@@ -777,6 +777,14 @@ p {
   outline-offset: -3px;
 }
 
+.scripture-accordion__heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.6rem;
+  align-items: center;
+  min-width: 0;
+}
+
 .scripture-accordion__reference {
   font-family:
     Iowan Old Style,
@@ -786,6 +794,22 @@ p {
   font-size: clamp(1.1rem, 1.7vw, 1.3rem);
   font-weight: 700;
   line-height: 1.08;
+}
+
+.scripture-track-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  border: 1px solid color-mix(in srgb, var(--season-accent, var(--foreground)) 48%, var(--border));
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  background: color-mix(in srgb, var(--season-accent, var(--surface)) 12%, var(--surface));
+  color: color-mix(in srgb, var(--season-accent-dark, var(--foreground)) 78%, var(--foreground));
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .scripture-accordion__content {

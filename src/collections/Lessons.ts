@@ -4,6 +4,7 @@ import type { CollectionConfig } from 'payload'
 import { isAdmin, isAdminField, publishedOrAdmin } from '../access'
 import { SEASON_OPTIONS } from '../lib/liturgical-themes'
 import { OBSERVANCE_TYPE_OPTIONS } from '../lib/observance-types'
+import { SCRIPTURE_TRACK_OPTIONS } from '../lib/scripture-tracks'
 
 const slugify = (value: string): string =>
   value
@@ -158,6 +159,17 @@ export const Lessons: CollectionConfig = {
                   defaultValue: 'NRSV-UE',
                   admin: {
                     placeholder: 'NRSV-UE',
+                  },
+                },
+                {
+                  name: 'track',
+                  type: 'select',
+                  defaultValue: 'none',
+                  label: 'Track',
+                  options: [...SCRIPTURE_TRACK_OPTIONS],
+                  admin: {
+                    description:
+                      'Use Track 1 or Track 2 for appointed Old Testament/Psalm alternatives; leave as None for ordinary readings.',
                   },
                 },
                 {
