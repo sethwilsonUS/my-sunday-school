@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import { splitLessonsForHomepage } from '@/lib/homepage-lessons'
+import type { ObservanceType } from '@/lib/observance-types'
+
+type HomepageFixtureLesson = {
+  date: string
+  observanceType: ObservanceType
+  slug: string
+}
 
 describe('splitLessonsForHomepage', () => {
   it('features the lesson closest to today on or after today', () => {
-    const lessons = [
+    const lessons: HomepageFixtureLesson[] = [
       { date: '2026-05-10', observanceType: 'sunday', slug: 'later-future' },
       { date: '2026-04-26', observanceType: 'sunday', slug: 'upcoming-sunday' },
       { date: '2026-04-19', observanceType: 'sunday', slug: 'recent-past' },
@@ -21,7 +28,7 @@ describe('splitLessonsForHomepage', () => {
   })
 
   it('falls back to the most recent past lesson when nothing upcoming exists', () => {
-    const lessons = [
+    const lessons: HomepageFixtureLesson[] = [
       { date: '2026-04-12', observanceType: 'sunday', slug: 'older-past' },
       { date: '2026-04-19', observanceType: 'sunday', slug: 'most-recent-past' },
     ]
@@ -34,7 +41,7 @@ describe('splitLessonsForHomepage', () => {
   })
 
   it('keeps the homepage feature pinned to Sunday lessons', () => {
-    const lessons = [
+    const lessons: HomepageFixtureLesson[] = [
       { date: '2026-05-31', observanceType: 'holy-day', slug: 'visitation' },
       { date: '2026-06-07', observanceType: 'sunday', slug: 'trinity-sunday' },
       { date: '2026-05-24', observanceType: 'sunday', slug: 'pentecost' },

@@ -10,6 +10,7 @@ import { getPublishedLessonBySlug } from '@/lib/lessons'
 import { markdownToHTML } from '@/lib/markdown'
 import { getLessonDetailLabel } from '@/lib/observance-types'
 import { richTextToHTML } from '@/lib/richText'
+import { getScriptureTrackLabel } from '@/lib/scripture-tracks'
 import {
   LESSON_SOCIAL_IMAGE_ALT,
   OPEN_GRAPH_CONTENT_TYPE,
@@ -161,27 +162,38 @@ export default async function LessonPage({ params }: PageProps) {
             <section className="content-section">
               <h2>Scripture</h2>
               <div className="scripture-list">
-                {scriptures.map((scripture) => (
-                  <details
-                    key={scripture.id ?? scripture.reference}
-                    className="scripture-card scripture-accordion"
-                  >
-                    <summary>
-                      <span className="scripture-accordion__reference">{scripture.reference}</span>
-                    </summary>
-                    <div className="scripture-accordion__content">
-                      <p className="muted">{scripture.translation ?? 'NRSV-UE'}</p>
-                      {scripture.passageText ? (
-                        <div
-                          className="rich-text scripture-text"
-                          dangerouslySetInnerHTML={{
-                            __html: richTextToHTML(scripture.passageText) ?? '',
-                          }}
-                        />
-                      ) : null}
-                    </div>
-                  </details>
-                ))}
+                {scriptures.map((scripture) => {
+                  const trackLabel = getScriptureTrackLabel(scripture.track)
+
+                  return (
+                    <details
+                      key={scripture.id ?? scripture.reference}
+                      className="scripture-card scripture-accordion"
+                    >
+                      <summary>
+                        <span className="scripture-accordion__heading">
+                          <span className="scripture-accordion__reference">
+                            {scripture.reference}
+                          </span>
+                          {trackLabel ? (
+                            <span className="scripture-track-badge">{trackLabel}</span>
+                          ) : null}
+                        </span>
+                      </summary>
+                      <div className="scripture-accordion__content">
+                        <p className="muted">{scripture.translation ?? 'NRSV-UE'}</p>
+                        {scripture.passageText ? (
+                          <div
+                            className="rich-text scripture-text"
+                            dangerouslySetInnerHTML={{
+                              __html: richTextToHTML(scripture.passageText) ?? '',
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    </details>
+                  )
+                })}
               </div>
             </section>
           ) : null}

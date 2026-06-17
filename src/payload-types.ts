@@ -248,6 +248,10 @@ export interface Lesson {
         reference: string;
         translation?: string | null;
         /**
+         * Use Track 1 or Track 2 for appointed Old Testament/Psalm alternatives; leave as None for ordinary readings.
+         */
+        track?: ('none' | 'track-1' | 'track-2') | null;
+        /**
          * Recommended Logos format: Bible paragraphs with verse numbers, no footnotes, no citation. The public site styles verse numbers as superscripts and tightens wrapped poetic lines.
          */
         passageText?: {
@@ -535,6 +539,7 @@ export interface LessonsSelect<T extends boolean = true> {
     | {
         reference?: T;
         translation?: T;
+        track?: T;
         passageText?: T;
         id?: T;
       };

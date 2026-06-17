@@ -76,9 +76,13 @@ describe('art source resolver', () => {
   })
 
   it('does not normalize non-Commons wiki file URLs as Commons titles', () => {
-    expect(normalizeCommonsFileTitle('https://museum.example/wiki/File:Collection_Image.jpg')).toBeUndefined()
     expect(
-      normalizeCommonsFileTitle('https://museum.example/wiki/Special:Redirect/file/Collection%20Image.jpg'),
+      normalizeCommonsFileTitle('https://museum.example/wiki/File:Collection_Image.jpg'),
+    ).toBeUndefined()
+    expect(
+      normalizeCommonsFileTitle(
+        'https://museum.example/wiki/Special:Redirect/file/Collection%20Image.jpg',
+      ),
     ).toBeUndefined()
   })
 
@@ -86,7 +90,11 @@ describe('art source resolver', () => {
     const chosen = chooseBestValidatedCandidate([
       candidate('https://example.test/small.jpg', { width: 700, height: 900 }, 800_000),
       candidate('https://example.test/better.jpg', { width: 1600, height: 1200 }, 300_000),
-      candidate('https://example.test/big-file-smaller-area.jpg', { width: 1000, height: 1000 }, 900_000),
+      candidate(
+        'https://example.test/big-file-smaller-area.jpg',
+        { width: 1000, height: 1000 },
+        900_000,
+      ),
     ])
 
     expect(chosen?.url).toBe('https://example.test/better.jpg')
@@ -94,8 +102,16 @@ describe('art source resolver', () => {
 
   it('chooses the longer longest dimension when pixel area is equal', () => {
     const chosen = chooseBestValidatedCandidate([
-      candidate('https://example.test/bigger-file-shorter-longest.jpg', { width: 1000, height: 1000 }, 900_000),
-      candidate('https://example.test/smaller-file-longer-longest.jpg', { width: 2000, height: 500 }, 300_000),
+      candidate(
+        'https://example.test/bigger-file-shorter-longest.jpg',
+        { width: 1000, height: 1000 },
+        900_000,
+      ),
+      candidate(
+        'https://example.test/smaller-file-longer-longest.jpg',
+        { width: 2000, height: 500 },
+        300_000,
+      ),
     ])
 
     expect(chosen?.url).toBe('https://example.test/smaller-file-longer-longest.jpg')
@@ -103,8 +119,16 @@ describe('art source resolver', () => {
 
   it('chooses the larger filesize when pixel area and longest dimension are equal', () => {
     const chosen = chooseBestValidatedCandidate([
-      candidate('https://example.test/equal-area-smaller-file.jpg', { width: 1600, height: 1200 }, 300_000),
-      candidate('https://example.test/equal-area-bigger-file.jpg', { width: 1200, height: 1600 }, 900_000),
+      candidate(
+        'https://example.test/equal-area-smaller-file.jpg',
+        { width: 1600, height: 1200 },
+        300_000,
+      ),
+      candidate(
+        'https://example.test/equal-area-bigger-file.jpg',
+        { width: 1200, height: 1600 },
+        900_000,
+      ),
     ])
 
     expect(chosen?.url).toBe('https://example.test/equal-area-bigger-file.jpg')
@@ -112,24 +136,15 @@ describe('art source resolver', () => {
 
   it('requires a candidate to be materially better before refresh', () => {
     expect(
-      candidateIsMateriallyBetter(
-        { width: 700, height: 900 },
-        { width: 1280, height: 1646 },
-      ),
+      candidateIsMateriallyBetter({ width: 700, height: 900 }, { width: 1280, height: 1646 }),
     ).toBe(true)
 
     expect(
-      candidateIsMateriallyBetter(
-        { width: 1200, height: 1000 },
-        { width: 1300, height: 1030 },
-      ),
+      candidateIsMateriallyBetter({ width: 1200, height: 1000 }, { width: 1300, height: 1030 }),
     ).toBe(false)
 
     expect(
-      candidateIsMateriallyBetter(
-        { width: 1600, height: 1200 },
-        { width: 1280, height: 960 },
-      ),
+      candidateIsMateriallyBetter({ width: 1600, height: 1200 }, { width: 1280, height: 960 }),
     ).toBe(false)
   })
 
@@ -155,11 +170,13 @@ describe('art source resolver network resolution', () => {
     const original = await imageBuffer(1600, 1200)
     const direct = await imageBuffer(700, 900)
     let commonsRequestHadSignal = false
+    let commonsRequestCount = 0
     const fetchFn: typeof fetch = async (url, init) => {
       const href = fetchUrl(url)
 
       if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
         commonsRequestHadSignal = Boolean(init?.signal)
+        commonsRequestCount += 1
         return new Response(
           JSON.stringify({
             query: {
@@ -195,9 +212,12 @@ describe('art source resolver network resolution', () => {
 
     const resolved = await resolveArtworkImage(
       {
+        alternateSourceUrl:
+          'https://commons.wikimedia.org/wiki/Special:Redirect/file/El%20Greco%20-%20The%20Pentecost%20-%20WGA10533.jpg',
         artist: 'El Greco',
         imageUrl: 'https://example.test/direct.jpg',
-        sourceUrl: 'https://commons.wikimedia.org/wiki/File:El_Greco_-_The_Pentecost_-_WGA10533.jpg',
+        sourceUrl:
+          'https://commons.wikimedia.org/wiki/File:El_Greco_-_The_Pentecost_-_WGA10533.jpg',
         title: 'The Pentecost',
       },
       { fetchFn },
@@ -208,6 +228,77 @@ describe('art source resolver network resolution', () => {
     expect(resolved.providedImageUrl).toBe('https://example.test/direct.jpg')
     expect(resolved.changedFromProvided).toBe(true)
     expect(commonsRequestHadSignal).toBe(true)
+    expect(commonsRequestCount).toBe(1)
+  })
+
+  it('falls back to a Commons thumbnail when local and original images exceed the pixel limit', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'art-source-resolver-'))
+    const localFilePath = path.join(dir, 'song-sparrow.jpg')
+    const original = await imageBuffer(200, 200)
+    const thumbnail = await imageBuffer(80, 80)
+
+    try {
+      await writeFile(localFilePath, original)
+
+      const fetchFn: typeof fetch = async (url) => {
+        const href = fetchUrl(url)
+
+        if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
+          return new Response(
+            JSON.stringify({
+              query: {
+                pages: {
+                  '123': {
+                    imageinfo: [
+                      {
+                        height: 200,
+                        mime: 'image/jpeg',
+                        size: original.length,
+                        thumbheight: 80,
+                        thumburl: 'https://upload.wikimedia.org/thumb-song-sparrow.jpg',
+                        thumbwidth: 80,
+                        url: 'https://upload.wikimedia.org/original-song-sparrow.jpg',
+                        width: 200,
+                      },
+                    ],
+                  },
+                },
+              },
+            }),
+            { headers: { 'content-type': 'application/json' }, status: 200 },
+          )
+        }
+
+        if (href === 'https://upload.wikimedia.org/original-song-sparrow.jpg') {
+          return new Response(original, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+        }
+
+        if (href === 'https://upload.wikimedia.org/thumb-song-sparrow.jpg') {
+          return new Response(thumbnail, { headers: { 'content-type': 'image/jpeg' }, status: 200 })
+        }
+
+        return new Response('missing', { status: 404 })
+      }
+
+      const resolved = await resolveArtworkImage(
+        {
+          imageUrl: 'https://upload.wikimedia.org/original-song-sparrow.jpg',
+          localFilePath,
+          sourceUrl: 'https://commons.wikimedia.org/wiki/File:25_Song_Sparrow.jpg',
+          title: 'Song Sparrow',
+        },
+        { fetchFn, maxPixels: 10_000 },
+      )
+
+      expect(resolved.url).toBe('https://upload.wikimedia.org/thumb-song-sparrow.jpg')
+      expect(resolved.dimensions).toEqual({ width: 80, height: 80 })
+      expect(resolved.changedFromProvided).toBe(true)
+      expect(
+        resolved.failures.some((failure) => failure.includes('Input image exceeds pixel limit')),
+      ).toBe(true)
+    } finally {
+      await rm(dir, { force: true, recursive: true })
+    }
   })
 
   it('falls back to source-page og:image metadata when the source is not Commons', async () => {
@@ -388,7 +479,9 @@ describe('art source resolver network resolution', () => {
     try {
       await writeFile(filePath, await imageBuffer(128, 96))
 
-      const fetchFn = vi.fn(async () => new Response('rate limited', { status: 429, statusText: 'Too many requests' }))
+      const fetchFn = vi.fn(
+        async () => new Response('rate limited', { status: 429, statusText: 'Too many requests' }),
+      )
       const resolved = await resolveArtworkImage(
         {
           imageUrl: 'https://example.test/rublev.jpg',
@@ -437,9 +530,11 @@ describe('art source resolver network resolution', () => {
     )
 
     expect(resolved.url).toBe('https://example.test/provided.jpg')
-    expect(resolved.failures.some((failure) => failure.includes('source page exceeds maximum size 10 bytes'))).toBe(
-      true,
-    )
+    expect(
+      resolved.failures.some((failure) =>
+        failure.includes('source page exceeds maximum size 10 bytes'),
+      ),
+    ).toBe(true)
   })
 
   it('canonicalizes MIME type from decoded image metadata', async () => {
@@ -472,7 +567,10 @@ describe('art source resolver network resolution', () => {
       }
 
       if (href === 'https://example.test/extensionless') {
-        return new Response(avif, { headers: { 'content-type': 'application/octet-stream' }, status: 200 })
+        return new Response(avif, {
+          headers: { 'content-type': 'application/octet-stream' },
+          status: 200,
+        })
       }
 
       if (href === 'https://example.test/misleading.svg') {
@@ -482,9 +580,18 @@ describe('art source resolver network resolution', () => {
       return new Response('missing', { status: 404 })
     }
 
-    const pngResolved = await resolveArtworkImage({ imageUrl: 'https://example.test/misleading.jpg' }, { fetchFn })
-    const avifResolved = await resolveArtworkImage({ imageUrl: 'https://example.test/extensionless' }, { fetchFn })
-    const svgResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/misleading.svg' }, { fetchFn })
+    const pngResolved = await resolveArtworkImage(
+      { imageUrl: 'https://example.test/misleading.jpg' },
+      { fetchFn },
+    )
+    const avifResolved = await resolveArtworkImage(
+      { imageUrl: 'https://example.test/extensionless' },
+      { fetchFn },
+    )
+    const svgResolved = await resolveArtworkImage(
+      { sourceUrl: 'https://example.test/misleading.svg' },
+      { fetchFn },
+    )
 
     expect(pngResolved.mimeType).toBe('image/png')
     expect(avifResolved.mimeType).toBe('image/avif')
@@ -536,7 +643,9 @@ describe('art source resolver network resolution', () => {
       { fetchFn },
     )
 
-    expect(resolved.url).toBe('https://upload.wikimedia.org/wikipedia/commons/8/84/Chartres_JBU01.JPG')
+    expect(resolved.url).toBe(
+      'https://upload.wikimedia.org/wikipedia/commons/8/84/Chartres_JBU01.JPG',
+    )
     expect(resolved.dimensions).toEqual({ width: 2136, height: 2848 })
   })
 
@@ -567,10 +676,22 @@ describe('art source resolver network resolution', () => {
       return new Response('missing', { status: 404 })
     }
 
-    const avifResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.avif' }, { fetchFn })
-    const heicResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.heic' }, { fetchFn })
-    const heifResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.heif' }, { fetchFn })
-    const svgResolved = await resolveArtworkImage({ sourceUrl: 'https://example.test/source.svg' }, { fetchFn })
+    const avifResolved = await resolveArtworkImage(
+      { sourceUrl: 'https://example.test/source.avif' },
+      { fetchFn },
+    )
+    const heicResolved = await resolveArtworkImage(
+      { sourceUrl: 'https://example.test/source.heic' },
+      { fetchFn },
+    )
+    const heifResolved = await resolveArtworkImage(
+      { sourceUrl: 'https://example.test/source.heif' },
+      { fetchFn },
+    )
+    const svgResolved = await resolveArtworkImage(
+      { sourceUrl: 'https://example.test/source.svg' },
+      { fetchFn },
+    )
 
     expect(avifResolved.url).toBe('https://example.test/source.avif')
     expect(heicResolved.url).toBe('https://example.test/source.heic')
@@ -680,7 +801,9 @@ describe('art source resolver network resolution', () => {
     )
 
     expect(resolved.url).toBe('https://example.test/provided.jpg')
-    expect(resolved.failures.some((failure) => failure.includes('https://museum.example/artwork'))).toBe(true)
+    expect(
+      resolved.failures.some((failure) => failure.includes('https://museum.example/artwork')),
+    ).toBe(true)
   })
 
   it('records Commons JSON failures and still validates provided images', async () => {
@@ -689,7 +812,10 @@ describe('art source resolver network resolution', () => {
       const href = fetchUrl(url)
 
       if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
-        return new Response('{not json', { headers: { 'content-type': 'application/json' }, status: 200 })
+        return new Response('{not json', {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        })
       }
 
       if (href === 'https://example.test/provided.jpg') {
@@ -709,7 +835,9 @@ describe('art source resolver network resolution', () => {
     )
 
     expect(resolved.url).toBe('https://example.test/provided.jpg')
-    expect(resolved.failures.some((failure) => failure.includes('Commons JSON parse failed'))).toBe(true)
+    expect(resolved.failures.some((failure) => failure.includes('Commons JSON parse failed'))).toBe(
+      true,
+    )
   })
 
   it('records Commons page imageinfo failures and still validates provided images', async () => {
@@ -756,7 +884,8 @@ describe('art source resolver network resolution', () => {
     expect(resolved.url).toBe('https://example.test/provided.jpg')
     expect(
       resolved.failures.some(
-        (failure) => failure.includes('Malformed Imageinfo.jpg') && failure.includes('non-image MIME'),
+        (failure) =>
+          failure.includes('Malformed Imageinfo.jpg') && failure.includes('non-image MIME'),
       ),
     ).toBe(true)
   })
