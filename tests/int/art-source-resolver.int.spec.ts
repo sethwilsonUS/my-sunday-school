@@ -170,11 +170,13 @@ describe('art source resolver network resolution', () => {
     const original = await imageBuffer(1600, 1200)
     const direct = await imageBuffer(700, 900)
     let commonsRequestHadSignal = false
+    let commonsRequestCount = 0
     const fetchFn: typeof fetch = async (url, init) => {
       const href = fetchUrl(url)
 
       if (href.startsWith('https://commons.wikimedia.org/w/api.php')) {
         commonsRequestHadSignal = Boolean(init?.signal)
+        commonsRequestCount += 1
         return new Response(
           JSON.stringify({
             query: {
@@ -210,6 +212,8 @@ describe('art source resolver network resolution', () => {
 
     const resolved = await resolveArtworkImage(
       {
+        alternateSourceUrl:
+          'https://commons.wikimedia.org/wiki/Special:Redirect/file/El%20Greco%20-%20The%20Pentecost%20-%20WGA10533.jpg',
         artist: 'El Greco',
         imageUrl: 'https://example.test/direct.jpg',
         sourceUrl:
@@ -224,6 +228,7 @@ describe('art source resolver network resolution', () => {
     expect(resolved.providedImageUrl).toBe('https://example.test/direct.jpg')
     expect(resolved.changedFromProvided).toBe(true)
     expect(commonsRequestHadSignal).toBe(true)
+    expect(commonsRequestCount).toBe(1)
   })
 
   it('falls back to a Commons thumbnail when local and original images exceed the pixel limit', async () => {

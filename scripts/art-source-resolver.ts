@@ -234,6 +234,7 @@ async function collectCandidateHints(
   failures: string[],
 ) {
   const candidates: CandidateHint[] = []
+  const seenCommonsTitles = new Set<string>()
 
   await addCandidate(candidates, input.imageUrl, 'provided image URL', options, failures)
   await addCandidate(candidates, input.alternateImageUrl, 'alternate image URL', options, failures)
@@ -260,7 +261,8 @@ async function collectCandidateHints(
   ]) {
     const fileTitle = normalizeCommonsFileTitle(sourceUrl ?? undefined)
 
-    if (fileTitle) {
+    if (fileTitle && !seenCommonsTitles.has(fileTitle)) {
+      seenCommonsTitles.add(fileTitle)
       const commonsCandidates = await fetchCommonsImageCandidates(fileTitle, options, failures)
 
       for (const commonsCandidate of commonsCandidates) {
