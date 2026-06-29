@@ -1143,9 +1143,9 @@ blockquote footer {
   padding-left: 0.55rem;
   color: color-mix(in srgb, var(--foreground) 86%, var(--season-accent) 14%);
   font-family:
-    Avenir Next,
-    Gill Sans,
-    Trebuchet MS,
+    "Avenir Next",
+    "Gill Sans",
+    "Trebuchet MS",
     sans-serif;
   font-size: 0.79rem;
   font-style: italic;
