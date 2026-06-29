@@ -1133,9 +1133,24 @@ blockquote footer {
   font-weight: 850;
 }
 
+.artwork-card__meta {
+  color: var(--muted);
+}
+
 .artwork-card__theme {
-  color: var(--foreground);
-  font-weight: 800;
+  margin-top: 0.42rem;
+  border-left: 2px solid color-mix(in srgb, var(--season-accent) 62%, var(--border));
+  padding-left: 0.55rem;
+  color: color-mix(in srgb, var(--foreground) 86%, var(--season-accent) 14%);
+  font-family:
+    Avenir Next,
+    Gill Sans,
+    Trebuchet MS,
+    sans-serif;
+  font-size: 0.79rem;
+  font-style: italic;
+  font-weight: 650;
+  line-height: 1.4;
 }
 
 .artwork-card__source {

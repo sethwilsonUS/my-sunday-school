@@ -112,10 +112,12 @@ export function ArtworkCard({
         ) : null}
         <figcaption>
           {artworkTitle ? <cite className="artwork-card__title">{artworkTitle}</cite> : null}
-          {artworkTheme ? <span className="artwork-card__theme">{artworkTheme}</span> : null}
           {metadata.map((item, index) => (
-            <span key={`${item}-${index}`}>{item}</span>
+            <span className="artwork-card__meta" key={`${item}-${index}`}>
+              {item}
+            </span>
           ))}
+          {artworkTheme ? <span className="artwork-card__theme">{artworkTheme}</span> : null}
           {sourceUrl ? (
             <a
               className="artwork-card__source"
