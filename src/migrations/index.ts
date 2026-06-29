@@ -7,6 +7,7 @@ import * as migration_20260427_142353_add_media_image_sizes from './20260427_142
 import * as migration_20260507_000900_add_source_lectionary_url from './20260507_000900_add_source_lectionary_url'
 import * as migration_20260529_000900_add_observance_type_to_lessons from './20260529_000900_add_observance_type_to_lessons'
 import * as migration_20260617_000900_add_scripture_tracks from './20260617_000900_add_scripture_tracks'
+import * as migration_20260629_000900_add_media_title_theme from './20260629_000900_add_media_title_theme'
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20260617_000900_add_scripture_tracks.up,
     down: migration_20260617_000900_add_scripture_tracks.down,
     name: '20260617_000900_add_scripture_tracks',
+  },
+  {
+    up: migration_20260629_000900_add_media_title_theme.up,
+    down: migration_20260629_000900_add_media_title_theme.down,
+    name: '20260629_000900_add_media_title_theme',
   },
 ]

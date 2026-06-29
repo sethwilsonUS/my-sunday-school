@@ -271,6 +271,8 @@ export default async function LessonPage({ params }: PageProps) {
                   medium={media?.medium}
                   sourceUrl={media?.wikimediaUrl}
                   src={mediaSource?.src}
+                  theme={media?.theme ?? artwork.caption}
+                  title={media?.title}
                   workDate={media?.workDate}
                 />
               )

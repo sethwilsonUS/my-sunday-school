@@ -62,6 +62,7 @@ export type ArtworkLink = {
   medium?: string
   note?: string
   sourceUrl: string
+  theme?: string
   title: string
   workDate?: string
 }
@@ -147,7 +148,7 @@ export function buildLessonSyncData(input: LessonSyncInput) {
   }
 }
 
-function cleanString(value: string | undefined) {
+function cleanString(value: string | null | undefined) {
   return value?.trim() || undefined
 }
 
@@ -221,6 +222,14 @@ export function parseArtLinks(markdown: string) {
       fields.get('accessibility description') ??
       fields.get('alt text')
     const genericDescription = fields.get('description')
+    const theme =
+      fields.get('theme') ??
+      fields.get('tagline') ??
+      fields.get('classroom caption') ??
+      fields.get('caption') ??
+      fields.get('why this week') ??
+      fields.get('why') ??
+      (explicitAccessibleDescription ? genericDescription : undefined)
 
     artworks.push({
       ...parsedHeading,
@@ -237,13 +246,7 @@ export function parseArtLinks(markdown: string) {
           fields.get('higher-resolution alternate source') ??
           fields.get('alternate source used in the handout'),
       ),
-      description:
-        fields.get('theme') ??
-        fields.get('classroom caption') ??
-        fields.get('caption') ??
-        fields.get('why this week') ??
-        fields.get('why') ??
-        (explicitAccessibleDescription ? genericDescription : undefined),
+      description: theme,
       heading,
       imageUrl,
       localFilePath: cleanString(
@@ -256,6 +259,7 @@ export function parseArtLinks(markdown: string) {
       medium: cleanString(fields.get('medium') ?? fields.get('media')),
       note: fields.get('note'),
       sourceUrl,
+      theme,
     })
   }
 
@@ -271,11 +275,69 @@ export function getAltText(artwork: ArtworkLink) {
 }
 
 export function getCaption(artwork: ArtworkLink) {
-  if (artwork.description?.trim()) {
-    return artwork.description.trim()
+  const theme = artwork.theme ?? artwork.description
+
+  if (theme?.trim()) {
+    return theme.trim()
   }
 
   return `${artwork.artist}, ${artwork.title}${artwork.workDate ? ` (${artwork.workDate})` : ''}`
+}
+
+export function getMediaData(artwork: ArtworkLink) {
+  return {
+    altText: getAltText(artwork),
+    artist: cleanString(artwork.artist),
+    medium: cleanString(artwork.medium),
+    theme: cleanString(artwork.theme ?? artwork.description),
+    title: cleanString(artwork.title),
+    wikimediaUrl: artwork.sourceUrl,
+    workDate: cleanString(artwork.workDate),
+  }
+}
+
+type MediaData = ReturnType<typeof getMediaData>
+type MediaDataKey = keyof MediaData
+type ExistingMediaData = Partial<Record<MediaDataKey, string | null | undefined>>
+type NullableMediaDataKey = Exclude<MediaDataKey, 'altText'>
+type MediaDataChanges = Partial<Record<NullableMediaDataKey, string | null> & { altText: string }>
+
+export function getMediaDataChanges(existing: ExistingMediaData, artwork: ArtworkLink) {
+  const desired = getMediaData(artwork)
+  const changes: MediaDataChanges = {}
+
+  for (const key of Object.keys(desired) as MediaDataKey[]) {
+    const currentValue = cleanString(existing[key])
+    const nextValue = cleanString(desired[key])
+
+    if (!nextValue) {
+      if (currentValue && key !== 'altText') {
+        changes[key] = null
+      }
+      continue
+    }
+
+    if (currentValue !== nextValue) {
+      changes[key] = nextValue
+    }
+  }
+
+  return changes
+}
+
+export function getSharedMediaDataChanges(existing: ExistingMediaData, artwork: ArtworkLink) {
+  const changes = getMediaDataChanges(existing, artwork)
+  const skipped: MediaDataKey[] = []
+
+  if (
+    cleanString(existing.theme) &&
+    Object.prototype.hasOwnProperty.call(changes, 'theme')
+  ) {
+    delete changes.theme
+    skipped.push('theme')
+  }
+
+  return { changes, skipped }
 }
 
 export function getProposedFilename(

@@ -146,13 +146,21 @@ export interface User {
   collection: 'users';
 }
 /**
- * Store artwork and supporting media here. Write alt text for what the image shows, then add artist and source details so public credits stay clear.
+ * Store artwork and supporting media here. Add the work title, write alt text for what the image shows, then add artist and source details so public credits stay clear.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
 export interface Media {
   id: number;
+  /**
+   * The artwork, photograph, or media title when known.
+   */
+  title?: string | null;
+  /**
+   * Short lesson-facing theme or tagline shown with the artwork.
+   */
+  theme?: string | null;
   /**
    * Describe the visual information a reader needs if they cannot see the image. Avoid filenames or subject tags by themselves.
    */
@@ -468,6 +476,8 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
+  title?: T;
+  theme?: T;
   altText?: T;
   artist?: T;
   artistDates?: T;
