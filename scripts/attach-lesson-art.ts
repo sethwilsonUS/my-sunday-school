@@ -7,7 +7,7 @@ import {
   getAltText,
   getCaption,
   getMediaData,
-  getMediaDataChanges,
+  getSharedMediaDataChanges,
   getProposedFilename,
   mergeArtworkRowCaption,
   parseArtLinks,
@@ -198,7 +198,12 @@ async function updateExistingMediaMetadata(
   artwork: ArtworkLink,
   write: boolean,
 ) {
-  const changes = getMediaDataChanges(media, artwork)
+  const { changes, skipped } = getSharedMediaDataChanges(media, artwork)
+
+  if (skipped.includes('theme')) {
+    console.log('  media: existing shared theme differs; leaving unchanged')
+  }
+
   const fields = Object.keys(changes)
 
   if (fields.length === 0) {

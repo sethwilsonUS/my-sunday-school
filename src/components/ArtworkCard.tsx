@@ -48,7 +48,7 @@ export function ArtworkCard({
 
   const metadata = [artist, medium, workDate].filter(Boolean) as string[]
   const artworkTitle = title?.trim()
-  const artworkTheme = (theme ?? caption)?.trim()
+  const artworkTheme = theme?.trim() || caption?.trim()
   const imageLabel = artworkTitle || alt || 'Artwork'
   const dialogLabel = `Larger image: ${imageLabel}`
   const imageShellStyle =

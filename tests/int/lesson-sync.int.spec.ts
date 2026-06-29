@@ -9,6 +9,7 @@ import {
   getCaption,
   getMediaData,
   getMediaDataChanges,
+  getSharedMediaDataChanges,
   getProposedFilename,
   mergeArtworkRowCaption,
   normalizeSourceLectionaryUrl,
@@ -199,6 +200,67 @@ describe('lesson sync planning', () => {
     })
 
     expect(getMediaDataChanges(getMediaData(artwork), artwork)).toEqual({})
+  })
+
+  it('plans stale media metadata clears when source fields are removed', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Domenico Gargiulo, *Rebecca and Eliezer at the Well*, 17th century',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/image.jpg',
+        '- Accessibility description: Rebekah and Abraham’s servant meet beside a crowded well.',
+      ].join('\n'),
+    )
+
+    expect(
+      getMediaDataChanges(
+        {
+          altText: 'Rebekah and Abraham’s servant meet beside a crowded well.',
+          artist: 'Domenico Gargiulo',
+          medium: 'Oil painting',
+          theme: 'Providence, hospitality, and consent',
+          title: 'Rebecca and Eliezer at the Well',
+          wikimediaUrl: 'https://example.test/source',
+          workDate: '17th century',
+        },
+        artwork,
+      ),
+    ).toEqual({
+      medium: null,
+      theme: null,
+    })
+  })
+
+  it('preserves an existing shared media theme while allowing other metadata updates', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Domenico Gargiulo, *Rebecca and Eliezer at the Well*, 17th century',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/image.jpg',
+        '- Accessibility description: Rebekah and Abraham’s servant meet beside a crowded well.',
+        '- Theme: Providence, hospitality, and consent',
+      ].join('\n'),
+    )
+
+    expect(
+      getSharedMediaDataChanges(
+        {
+          altText: 'Rebekah and Abraham’s servant meet beside a crowded well.',
+          artist: 'Domenico Gargiulo',
+          theme: 'A theme already used by another lesson',
+          wikimediaUrl: 'https://example.test/source',
+          workDate: '17th century',
+        },
+        artwork,
+      ),
+    ).toEqual({
+      changes: {
+        title: 'Rebecca and Eliezer at the Well',
+      },
+      skipped: ['theme'],
+    })
   })
 
   it('keeps legacy Description-only art links as alt text instead of captions', () => {

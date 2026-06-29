@@ -24,4 +24,17 @@ describe('ArtworkCard', () => {
     expect(screen.getByText('Oil painting')).toBeTruthy()
     expect(screen.getByText('17th century')).toBeTruthy()
   })
+
+  it('falls back to the lesson caption when theme is blank', () => {
+    render(
+      <ArtworkCard
+        alt="Rebekah and Abraham’s servant meet beside a crowded well."
+        caption="A caption preserved on the lesson artwork row"
+        theme="   "
+        title="Rebecca and Eliezer at the Well"
+      />,
+    )
+
+    expect(screen.getByText('A caption preserved on the lesson artwork row')).toBeTruthy()
+  })
 })

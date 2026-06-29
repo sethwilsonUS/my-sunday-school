@@ -297,25 +297,47 @@ export function getMediaData(artwork: ArtworkLink) {
 }
 
 type MediaData = ReturnType<typeof getMediaData>
-type ExistingMediaData = Partial<Record<keyof MediaData, string | null | undefined>>
+type MediaDataKey = keyof MediaData
+type ExistingMediaData = Partial<Record<MediaDataKey, string | null | undefined>>
+type NullableMediaDataKey = Exclude<MediaDataKey, 'altText'>
+type MediaDataChanges = Partial<Record<NullableMediaDataKey, string | null> & { altText: string }>
 
 export function getMediaDataChanges(existing: ExistingMediaData, artwork: ArtworkLink) {
   const desired = getMediaData(artwork)
-  const changes: Partial<MediaData> = {}
+  const changes: MediaDataChanges = {}
 
-  for (const key of Object.keys(desired) as (keyof MediaData)[]) {
+  for (const key of Object.keys(desired) as MediaDataKey[]) {
+    const currentValue = cleanString(existing[key])
     const nextValue = cleanString(desired[key])
 
     if (!nextValue) {
+      if (currentValue && key !== 'altText') {
+        changes[key] = null
+      }
       continue
     }
 
-    if (cleanString(existing[key]) !== nextValue) {
+    if (currentValue !== nextValue) {
       changes[key] = nextValue
     }
   }
 
   return changes
+}
+
+export function getSharedMediaDataChanges(existing: ExistingMediaData, artwork: ArtworkLink) {
+  const changes = getMediaDataChanges(existing, artwork)
+  const skipped: MediaDataKey[] = []
+
+  if (
+    cleanString(existing.theme) &&
+    Object.prototype.hasOwnProperty.call(changes, 'theme')
+  ) {
+    delete changes.theme
+    skipped.push('theme')
+  }
+
+  return { changes, skipped }
 }
 
 export function getProposedFilename(
