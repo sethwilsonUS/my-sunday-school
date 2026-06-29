@@ -11,6 +11,8 @@ import {
   chooseLessonSyncTarget,
   getAltText,
   getCaption,
+  getMediaData,
+  getMediaDataChanges,
   getProposedFilename,
   mergeArtworkRowCaption,
   normalizeSourceLectionaryUrl,
@@ -309,13 +311,7 @@ async function findExistingMediaBySource(
 async function createMedia(payload: Payload, artwork: DownloadedArtwork) {
   return payload.create({
     collection: 'media',
-    data: {
-      altText: getAltText(artwork),
-      artist: artwork.artist,
-      medium: artwork.medium,
-      workDate: artwork.workDate,
-      wikimediaUrl: artwork.sourceUrl,
-    },
+    data: getMediaData(artwork),
     depth: 0,
     file: {
       data: artwork.buffer,
@@ -325,6 +321,35 @@ async function createMedia(payload: Payload, artwork: DownloadedArtwork) {
     },
     overrideAccess: true,
   })
+}
+
+async function updateExistingMediaMetadata(
+  payload: Payload,
+  media: Media,
+  artwork: ArtworkLink,
+  write: boolean,
+) {
+  const changes = getMediaDataChanges(media, artwork)
+  const fields = Object.keys(changes)
+
+  if (fields.length === 0) {
+    return false
+  }
+
+  if (write) {
+    await payload.update({
+      collection: 'media',
+      data: changes,
+      depth: 0,
+      id: media.id,
+      overrideAccess: true,
+    })
+    console.log(`  media: updated metadata (${fields.join(', ')})`)
+  } else {
+    console.log(`  media: would update metadata (${fields.join(', ')})`)
+  }
+
+  return true
 }
 
 async function syncArtwork({
@@ -353,6 +378,8 @@ async function syncArtwork({
     : [...existingArtworkRows]
   let mediaRecordsCreated = 0
   let mediaRecordsPlanned = 0
+  let mediaRecordsUpdated = 0
+  let mediaRecordsUpdatePlanned = 0
   let lessonArtworkRowsAdded = 0
   let lessonArtworkRowsPlanned = 0
   let lessonArtworkRowsUpdated = 0
@@ -378,6 +405,13 @@ async function syncArtwork({
     if (sourceMedia) {
       mediaId = sourceMedia.media.id
       console.log(`  media: reuse id ${mediaId} (${sourceMedia.reason}; skipped download)`)
+      if (await updateExistingMediaMetadata(payload, sourceMedia.media, artwork, write)) {
+        if (write) {
+          mediaRecordsUpdated += 1
+        } else {
+          mediaRecordsUpdatePlanned += 1
+        }
+      }
     } else {
       const downloaded = await downloadArtwork(artwork)
       const existingMedia = await findExistingMedia(payload, downloaded)
@@ -403,6 +437,13 @@ async function syncArtwork({
       if (existingMedia) {
         mediaId = existingMedia.media.id
         console.log(`  media: reuse id ${mediaId} (${existingMedia.reason})`)
+        if (await updateExistingMediaMetadata(payload, existingMedia.media, downloaded, write)) {
+          if (write) {
+            mediaRecordsUpdated += 1
+          } else {
+            mediaRecordsUpdatePlanned += 1
+          }
+        }
       } else if (write) {
         const media = await createMedia(payload, downloaded)
         mediaId = media.id
@@ -454,6 +495,8 @@ async function syncArtwork({
     finalArtworkRowCount: attachmentRows.length + mediaRecordsPlanned,
     mediaRecordsCreated,
     mediaRecordsPlanned,
+    mediaRecordsUpdated,
+    mediaRecordsUpdatePlanned,
     lessonArtworkRowsAdded,
     lessonArtworkRowsPlanned,
     lessonArtworkRowsUpdated,
@@ -597,12 +640,16 @@ async function main() {
     if (artworkSummary) {
       if (options.write) {
         console.log(`Created new media records: ${artworkSummary.mediaRecordsCreated}`)
+        console.log(`Updated existing media metadata: ${artworkSummary.mediaRecordsUpdated}`)
         console.log(`Added lesson artwork rows: ${artworkSummary.lessonArtworkRowsAdded}`)
         console.log(`Updated lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`)
         console.log(`Final lesson artwork rows: ${artworkSummary.attachmentRows.length}`)
         console.log('Payload writes were made.')
       } else {
         console.log(`Would upload new media records: ${artworkSummary.mediaRecordsPlanned}`)
+        console.log(
+          `Would update existing media metadata: ${artworkSummary.mediaRecordsUpdatePlanned}`,
+        )
         console.log(`Would add lesson artwork rows: ${artworkSummary.lessonArtworkRowsPlanned}`)
         console.log(
           `Would update lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`,

@@ -15,8 +15,10 @@ type ArtworkCardProps = {
   medium?: string | null
   sourceLabel?: string
   sourceUrl?: string | null
+  theme?: string | null
   lightboxSrc?: string | null
   src?: string | null
+  title?: string | null
   workDate?: string | null
 }
 
@@ -31,8 +33,10 @@ export function ArtworkCard({
   medium,
   sourceLabel = 'View on Wikimedia Commons',
   sourceUrl,
+  theme,
   lightboxSrc,
   src,
+  title,
   workDate,
 }: ArtworkCardProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -43,7 +47,9 @@ export function ArtworkCard({
   const [isLightboxImageVisible, setIsLightboxImageVisible] = useState(false)
 
   const metadata = [artist, medium, workDate].filter(Boolean) as string[]
-  const imageLabel = alt || 'Artwork'
+  const artworkTitle = title?.trim()
+  const artworkTheme = (theme ?? caption)?.trim()
+  const imageLabel = artworkTitle || alt || 'Artwork'
   const dialogLabel = `Larger image: ${imageLabel}`
   const imageShellStyle =
     imageWidth && imageHeight
@@ -105,7 +111,8 @@ export function ArtworkCard({
           </button>
         ) : null}
         <figcaption>
-          {caption ? <span>{caption}</span> : null}
+          {artworkTitle ? <cite className="artwork-card__title">{artworkTitle}</cite> : null}
+          {artworkTheme ? <span className="artwork-card__theme">{artworkTheme}</span> : null}
           {metadata.map((item, index) => (
             <span key={`${item}-${index}`}>{item}</span>
           ))}

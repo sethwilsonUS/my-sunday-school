@@ -7,6 +7,8 @@ import {
   chooseLessonSyncTarget,
   getAltText,
   getCaption,
+  getMediaData,
+  getMediaDataChanges,
   getProposedFilename,
   mergeArtworkRowCaption,
   normalizeSourceLectionaryUrl,
@@ -140,6 +142,63 @@ describe('lesson sync planning', () => {
     expect(getCaption(artwork)).toBe(
       'Paul meets his listeners where they are before naming the unknown God.',
     )
+  })
+
+  it('keeps artwork title and lesson theme as separate media metadata', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Domenico Gargiulo, *Rebecca and Eliezer at the Well*, 17th century',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/image.jpg',
+        '- Medium: Oil painting',
+        '- Accessibility description: Rebekah and Abraham’s servant meet beside a crowded well.',
+        '- Theme: Providence, hospitality, and consent',
+      ].join('\n'),
+    )
+
+    expect(artwork.title).toBe('Rebecca and Eliezer at the Well')
+    expect(artwork.theme).toBe('Providence, hospitality, and consent')
+    expect(getCaption(artwork)).toBe('Providence, hospitality, and consent')
+    expect(getMediaData(artwork)).toEqual({
+      altText: 'Rebekah and Abraham’s servant meet beside a crowded well.',
+      artist: 'Domenico Gargiulo',
+      medium: 'Oil painting',
+      theme: 'Providence, hospitality, and consent',
+      title: 'Rebecca and Eliezer at the Well',
+      wikimediaUrl: 'https://example.test/source',
+      workDate: '17th century',
+    })
+  })
+
+  it('plans existing media metadata updates when title and theme are missing', () => {
+    const [artwork] = parseArtLinks(
+      [
+        '## Domenico Gargiulo, *Rebecca and Eliezer at the Well*, 17th century',
+        '',
+        '- Source: https://example.test/source',
+        '- Image: https://example.test/image.jpg',
+        '- Accessibility description: Rebekah and Abraham’s servant meet beside a crowded well.',
+        '- Theme: Providence, hospitality, and consent',
+      ].join('\n'),
+    )
+
+    expect(
+      getMediaDataChanges(
+        {
+          altText: 'Rebekah and Abraham’s servant meet beside a crowded well.',
+          artist: 'Domenico Gargiulo',
+          wikimediaUrl: 'https://example.test/source',
+          workDate: '17th century',
+        },
+        artwork,
+      ),
+    ).toEqual({
+      theme: 'Providence, hospitality, and consent',
+      title: 'Rebecca and Eliezer at the Well',
+    })
+
+    expect(getMediaDataChanges(getMediaData(artwork), artwork)).toEqual({})
   })
 
   it('keeps legacy Description-only art links as alt text instead of captions', () => {

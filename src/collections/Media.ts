@@ -26,11 +26,28 @@ export const Media: CollectionConfig = {
   },
   admin: {
     description:
-      'Store artwork and supporting media here. Write alt text for what the image shows, then add artist and source details so public credits stay clear.',
-    useAsTitle: 'altText',
-    defaultColumns: ['filename', 'altText', 'artist', 'medium'],
+      'Store artwork and supporting media here. Add the work title, write alt text for what the image shows, then add artist and source details so public credits stay clear.',
+    useAsTitle: 'title',
+    defaultColumns: ['filename', 'title', 'artist', 'medium'],
   },
   fields: [
+    {
+      name: 'title',
+      type: 'text',
+      label: 'Title',
+      admin: {
+        description: 'The artwork, photograph, or media title when known.',
+        placeholder: 'Rebecca and Eliezer at the Well',
+      },
+    },
+    {
+      name: 'theme',
+      type: 'text',
+      admin: {
+        description: 'Short lesson-facing theme or tagline shown with the artwork.',
+        placeholder: 'Providence, hospitality, and consent',
+      },
+    },
     {
       name: 'altText',
       type: 'text',

@@ -1127,7 +1127,13 @@ blockquote footer {
   font-size: 0.87rem;
 }
 
-.artwork-card figcaption span:first-child {
+.artwork-card__title {
+  color: var(--foreground);
+  font-style: italic;
+  font-weight: 850;
+}
+
+.artwork-card__theme {
   color: var(--foreground);
   font-weight: 800;
 }
