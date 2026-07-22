@@ -1,13 +1,15 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig, type Plugin } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
-import { Users } from './collections/Users'
-import { Media } from './collections/Media'
+import { isAdmin } from './access'
 import { Lessons } from './collections/Lessons'
+import { Media } from './collections/Media'
+import { Users } from './collections/Users'
 import { getMediaClientUploadRoute } from './lib/payload/mediaClientUploadRoute'
 import { vercelBlobStorageWithOverwrite } from './lib/payload/vercelBlobStorageWithOverwrite'
 
@@ -85,6 +87,35 @@ export default buildConfig({
   }),
   sharp,
   plugins: [
+    mcpPlugin({
+      collections: {
+        lessons: {
+          description:
+            'Sunday school lessons, including scripture, selected quotations, activities, and lesson content.',
+          enabled: { find: true },
+        },
+        media: {
+          description: 'Lesson artwork and other media metadata used by Sunday school lessons.',
+          enabled: { find: true },
+        },
+      },
+      mcp: {
+        serverOptions: {
+          instructions:
+            'Read-only Sunday school content access. Use findLessons for lesson text, scripture, and selected quotations; use findMedia for artwork metadata. Prefer select to request only the fields needed and avoid returning full rich-text documents unnecessarily.',
+        },
+      },
+      overrideApiKeyCollection: (collection) => ({
+        ...collection,
+        access: {
+          ...collection.access,
+          create: isAdmin,
+          delete: isAdmin,
+          read: isAdmin,
+          update: isAdmin,
+        },
+      }),
+    }),
     vercelBlobStorageWithOverwrite({
       enabled: hasValidBlobToken,
       collections: {
