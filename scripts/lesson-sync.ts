@@ -690,13 +690,14 @@ async function main() {
 
     const existingLesson =
       target.action === 'create-draft' ? undefined : (target.lesson as LessonWithSource)
-    const scripturePlan = scriptureManifest
-      ? planScriptureSync(
-          existingLesson?.scriptures,
-          scriptureManifest,
-          options.replaceExistingScriptures,
-        )
-      : undefined
+    const scripturePlan =
+      scriptureManifest && target.action !== 'update-published-art'
+        ? planScriptureSync(
+            existingLesson?.scriptures,
+            scriptureManifest,
+            options.replaceExistingScriptures,
+          )
+        : undefined
     const scriptureRows = scripturePlan?.rows as NonNullable<Lesson['scriptures']> | undefined
     const selectedQuotePlan =
       selectedQuoteManifest && target.action !== 'update-published-art'

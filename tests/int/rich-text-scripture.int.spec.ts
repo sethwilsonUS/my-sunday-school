@@ -56,5 +56,20 @@ describe('scripture rich-text rendering', () => {
 
     expect(html?.match(/class="scripture-verse-number"/g)).toHaveLength(2)
     expect(html).not.toContain('\u00a0')
+    expect(html).not.toContain('&nbsp;')
+  })
+
+  it('does not apply verse-start indentation to an inline verse marker', () => {
+    const html = richTextToHTML(
+      stateWithChildren([
+        textNode('First sentence. '),
+        textNode('20', 64),
+        textNode(' Second sentence.'),
+      ]),
+    )
+
+    expect(html).toContain('<sup class="scripture-verse-number">20</sup>')
+    expect(html).toContain('class="scripture-line"')
+    expect(html).not.toContain('scripture-verse-start')
   })
 })

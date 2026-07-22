@@ -111,13 +111,6 @@ const styleScriptureLines = (html: string) =>
         )
       }
 
-      if (styledNumbers.includes('scripture-verse-number')) {
-        return addParagraphClass(
-          paragraph.replace(content, styledNumbers),
-          'scripture-verse-start',
-        )
-      }
-
       return addParagraphClass(paragraph.replace(content, styledNumbers), 'scripture-line')
     },
   )

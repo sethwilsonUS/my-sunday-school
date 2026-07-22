@@ -703,6 +703,7 @@ export function scriptureManifestDigest(
     'lectionaryModified' | 'passages' | 'schemaVersion' | 'sourceLectionaryUrl'
   >,
 ) {
+  // Preserve nested key ordering as part of the approval digest; do not replace this with stableStringify.
   const canonicalContent = {
     lectionaryModified: manifest.lectionaryModified,
     passages: manifest.passages,
