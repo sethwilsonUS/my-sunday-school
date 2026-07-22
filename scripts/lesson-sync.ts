@@ -26,6 +26,21 @@ import {
   type LessonSyncInput,
 } from './lesson-sync-helpers'
 import { parseObservanceType } from '../src/lib/observance-types'
+import {
+  logScriptureManifest,
+  buildScriptureManifestFromSources,
+  readScriptureManifest,
+  validateScriptureManifestForWrite,
+  writeScriptureManifest,
+} from './scripture-sync'
+import { planScriptureSync, type ScriptureManifest } from './scripture-sync-helpers'
+import {
+  logSelectedQuoteManifest,
+  planSelectedQuoteSync,
+  readSelectedQuoteManifest,
+  validateSelectedQuoteManifestForWrite,
+  type SelectedQuoteManifest,
+} from './selected-quotes-sync'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -42,7 +57,15 @@ type Options = {
   lectionaryYear?: 'A' | 'B' | 'C'
   observanceType?: ObservanceType
   replaceExistingArt: boolean
+  replaceExistingScriptures: boolean
+  quotesManifestPath?: string
+  quotesSha?: string
   season?: string
+  scriptureManifestIn?: string
+  scriptureManifestOut?: string
+  scripturesOnly: boolean
+  scriptureSha?: string
+  skipScriptures: boolean
   slug?: string
   sourceUrl?: string
   title?: string
@@ -59,11 +82,13 @@ type MediaMatch = {
 }
 
 const usage = `Usage:
-  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --allow-published-art --replace-existing-art
+  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --scripture-manifest-out /path/to/scripture-manifest.json
   pnpm lesson:sync -- --date 2026-05-31 --title "The Visitation of the Blessed Virgin Mary" --season easter --type holy-day --slug 2026-05-31-the-visitation --source-url https://www.episcopalchurch.org/lectionary/visitation/ --collect "Father in heaven..."
-  pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --art-links /path/to/art-links.md --allow-published-art --replace-existing-art
+  pnpm lesson:sync -- --write --confirm-shared-db --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --year A --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --collect "O God..." --scripture-manifest-in /path/to/scripture-manifest.json --expect-scripture-sha HASH
+  pnpm lesson:sync -- --date 2026-07-19 --title "Wheat, Weeds, and the Gate of Heaven" --season pentecost --slug 2026-07-19-proper-11a --art-links /path/to/art-links.md --quotes-manifest /path/to/selected-quotes.json
+  pnpm lesson:sync -- --date 2026-05-10 --title "Sixth Sunday of Easter" --season easter --slug 2026-05-10-easter-6a --source-url https://www.episcopalchurch.org/lectionary/easter-6a/ --scriptures-only --scripture-manifest-out /path/to/scripture-manifest.json
 
-Default mode is a dry run. Write mode requires --write and --confirm-shared-db. Matching is by sourceLectionaryUrl + date first, then slug. Published matches are blocked by default; --allow-published-art permits an art-only append/replace when --art-links is present.
+Default mode is a dry run. Draft sync automatically plans WEB passages from the Episcopal lectionary URL. Write mode requires --write, --confirm-shared-db, and the approved scripture manifest from the dry run. Matching is by sourceLectionaryUrl + date first, then slug. Published matches are blocked by default; --allow-published-art permits an art-only append/replace when --art-links is present.
 `
 
 function readFlagValue(args: string[], index: number, flag: string) {
@@ -82,6 +107,9 @@ function parseArgs(args: string[]): Options {
     confirmSharedDB: false,
     help: false,
     replaceExistingArt: false,
+    replaceExistingScriptures: false,
+    scripturesOnly: false,
+    skipScriptures: false,
     write: false,
   }
 
@@ -118,12 +146,36 @@ function parseArgs(args: string[]): Options {
       case '--replace-existing-art':
         options.replaceExistingArt = true
         break
+      case '--replace-existing-scriptures':
+        options.replaceExistingScriptures = true
+        break
+      case '--quotes-manifest':
+        options.quotesManifestPath = getValue()
+        break
+      case '--expect-quotes-sha':
+        options.quotesSha = getValue()
+        break
       case '--observance-type':
       case '--type':
         options.observanceType = parseObservanceType(getValue())
         break
       case '--season':
         options.season = getValue()
+        break
+      case '--scripture-manifest-in':
+        options.scriptureManifestIn = getValue()
+        break
+      case '--scripture-manifest-out':
+        options.scriptureManifestOut = getValue()
+        break
+      case '--scriptures-only':
+        options.scripturesOnly = true
+        break
+      case '--expect-scripture-sha':
+        options.scriptureSha = getValue()
+        break
+      case '--skip-scriptures':
+        options.skipScriptures = true
         break
       case '--slug':
         options.slug = getValue()
@@ -156,6 +208,26 @@ function parseArgs(args: string[]): Options {
 
   if (options.allowPublishedArt && !options.artLinksPath) {
     throw new Error('--allow-published-art requires --art-links.')
+  }
+
+  if (options.scripturesOnly && (options.skipScriptures || options.artLinksPath)) {
+    throw new Error('--scriptures-only cannot be combined with --skip-scriptures or --art-links.')
+  }
+
+  if (options.write && options.scriptureManifestOut) {
+    throw new Error('Write mode uses --scripture-manifest-in, not --scripture-manifest-out.')
+  }
+
+  if (!options.write && options.scriptureManifestIn) {
+    throw new Error('Dry-run mode uses --scripture-manifest-out, not --scripture-manifest-in.')
+  }
+
+  if (options.quotesManifestPath && !options.artLinksPath) {
+    throw new Error('--quotes-manifest requires --art-links.')
+  }
+
+  if (options.quotesSha && !options.write) {
+    throw new Error('--expect-quotes-sha is only used in write mode.')
   }
 
   return options
@@ -519,6 +591,44 @@ async function main() {
   const input = optionsToSyncInput(options)
   const lessonData = buildLessonSyncData(input)
   const lessonUrl = `https://lectionarylessons.org/lessons/${input.slug}`
+  const shouldSyncScriptures = !options.skipScriptures && Boolean(input.sourceUrl)
+  let scriptureManifest: ScriptureManifest | undefined
+  let selectedQuoteManifest: SelectedQuoteManifest | undefined
+
+  if (options.scripturesOnly && !input.sourceUrl) {
+    throw new Error('--scriptures-only requires --source-url.')
+  }
+
+  if (shouldSyncScriptures) {
+    if (options.write) {
+      if (!options.scriptureManifestIn) {
+        throw new Error(
+          'WEB scripture write requires --scripture-manifest-in from a successful dry run.',
+        )
+      }
+
+      scriptureManifest = await readScriptureManifest(options.scriptureManifestIn)
+      validateScriptureManifestForWrite(
+        scriptureManifest,
+        input.sourceUrl as string,
+        options.scriptureSha,
+      )
+    } else {
+      scriptureManifest = await buildScriptureManifestFromSources(input.sourceUrl as string)
+
+      if (options.scriptureManifestOut) {
+        await writeScriptureManifest(options.scriptureManifestOut, scriptureManifest)
+      }
+    }
+  }
+
+  if (options.quotesManifestPath) {
+    selectedQuoteManifest = await readSelectedQuoteManifest(options.quotesManifestPath)
+
+    if (options.write) {
+      validateSelectedQuoteManifestForWrite(selectedQuoteManifest, options.quotesSha)
+    }
+  }
 
   console.log(
     options.write ? 'Running lesson sync in WRITE mode.' : 'Running lesson sync as a dry run.',
@@ -526,6 +636,27 @@ async function main() {
   console.log(`Lesson slug: ${input.slug}`)
   console.log(`Source lectionary URL: ${lessonData.sourceLectionaryUrl ?? 'not provided'}`)
   console.log(`Future/public URL after publish: ${lessonUrl}`)
+  if (scriptureManifest) {
+    console.log('')
+    logScriptureManifest(scriptureManifest)
+    if (options.scriptureManifestOut) {
+      console.log(`Scripture manifest written: ${options.scriptureManifestOut}`)
+    }
+    if (options.scriptureManifestIn) {
+      console.log(`Scripture manifest approved: ${options.scriptureManifestIn}`)
+    }
+  } else {
+    console.log('WEB scripture sync: skipped.')
+  }
+  if (selectedQuoteManifest) {
+    console.log('')
+    logSelectedQuoteManifest(selectedQuoteManifest)
+    console.log(
+      `${options.write ? 'Selected quote manifest approved' : 'Selected quote manifest reviewed'}: ${options.quotesManifestPath}`,
+    )
+  } else if (options.artLinksPath) {
+    console.log('Selected Payload quote sync: skipped (no manifest provided).')
+  }
   console.log('')
 
   const payload = await getPayload({ config })
@@ -553,7 +684,49 @@ async function main() {
       )
     }
 
-    if (target.action === 'update-published-art') {
+    if (options.scripturesOnly && target.action === 'create-draft') {
+      throw new Error('--scriptures-only requires an existing draft lesson.')
+    }
+
+    const existingLesson =
+      target.action === 'create-draft' ? undefined : (target.lesson as LessonWithSource)
+    const scripturePlan = scriptureManifest
+      ? planScriptureSync(
+          existingLesson?.scriptures,
+          scriptureManifest,
+          options.replaceExistingScriptures,
+        )
+      : undefined
+    const scriptureRows = scripturePlan?.rows as NonNullable<Lesson['scriptures']> | undefined
+    const selectedQuotePlan =
+      selectedQuoteManifest && target.action !== 'update-published-art'
+        ? planSelectedQuoteSync(existingLesson?.quotes, selectedQuoteManifest)
+        : undefined
+
+    if (scripturePlan) {
+      console.log(
+        `Scripture row action: ${scripturePlan.action} (${scripturePlan.rows.length} WEB passage${scripturePlan.rows.length === 1 ? '' : 's'}).`,
+      )
+      console.log('')
+    }
+
+    if (selectedQuotePlan) {
+      console.log(
+        `Selected quote row action: ${selectedQuotePlan.added} add, ${selectedQuotePlan.enriched} metadata enrichment${selectedQuotePlan.enriched === 1 ? '' : 's'}, ${selectedQuotePlan.rows.length} final quote row${selectedQuotePlan.rows.length === 1 ? '' : 's'}.`,
+      )
+      console.log('Existing Payload quote rows are preserved; matching text is not duplicated.')
+      console.log('')
+    } else if (selectedQuoteManifest && target.action === 'update-published-art') {
+      console.log(
+        'Selected quote row action: skipped because --allow-published-art remains art-only for published lessons.',
+      )
+      console.log('')
+    }
+
+    if (options.scripturesOnly) {
+      console.log('Planned lesson metadata: skipped because this is a scriptures-only refresh.')
+      console.log('')
+    } else if (target.action === 'update-published-art') {
       console.log(
         'Planned lesson metadata: skipped because --allow-published-art is art-only for published lessons.',
       )
@@ -575,7 +748,7 @@ async function main() {
       if (options.write) {
         lesson = (await payload.create({
           collection: 'lessons',
-          data: lessonData,
+          data: scriptureRows ? { ...lessonData, scriptures: scriptureRows } : lessonData,
           depth: 2,
           overrideAccess: true,
         })) as LessonWithSource
@@ -588,14 +761,26 @@ async function main() {
       )
       console.log(
         options.write
-          ? 'Action: update draft lesson metadata.'
-          : 'Action: would update draft lesson metadata.',
+          ? options.scripturesOnly
+            ? 'Action: refresh draft lesson WEB scripture.'
+            : shouldSyncScriptures
+              ? 'Action: update draft lesson metadata and WEB scripture.'
+              : 'Action: update draft lesson metadata.'
+          : options.scripturesOnly
+            ? 'Action: would refresh draft lesson WEB scripture.'
+            : shouldSyncScriptures
+              ? 'Action: would update draft lesson metadata and WEB scripture.'
+              : 'Action: would update draft lesson metadata.',
       )
 
       if (options.write) {
         lesson = (await payload.update({
           collection: 'lessons',
-          data: lessonData,
+          data: options.scripturesOnly
+            ? { scriptures: scriptureRows }
+            : scriptureRows
+              ? { ...lessonData, scriptures: scriptureRows }
+              : lessonData,
           depth: 2,
           id: lesson.id,
           overrideAccess: true,
@@ -628,14 +813,22 @@ async function main() {
       if (options.write && lesson) {
         await payload.update({
           collection: 'lessons',
-          data: { artworks: artworkSummary.attachmentRows },
+          data: selectedQuotePlan
+            ? { artworks: artworkSummary.attachmentRows, quotes: selectedQuotePlan.rows }
+            : { artworks: artworkSummary.attachmentRows },
           depth: 0,
           id: lesson.id,
           overrideAccess: true,
         })
       }
     } else {
-      console.log('Art links: not provided; metadata only sync.')
+      console.log(
+        options.scripturesOnly
+          ? 'Art links: not provided; scriptures-only refresh.'
+          : scriptureManifest
+            ? 'Art links: not provided; metadata and WEB scripture sync.'
+            : 'Art links: not provided; metadata-only sync.',
+      )
     }
 
     console.log(`${options.write ? 'Write' : 'Dry run'} complete.`)
@@ -649,6 +842,11 @@ async function main() {
         console.log(`Added lesson artwork rows: ${artworkSummary.lessonArtworkRowsAdded}`)
         console.log(`Updated lesson artwork captions: ${artworkSummary.lessonArtworkRowsUpdated}`)
         console.log(`Final lesson artwork rows: ${artworkSummary.attachmentRows.length}`)
+        if (selectedQuotePlan) {
+          console.log(`Added selected quote rows: ${selectedQuotePlan.added}`)
+          console.log(`Enriched matching quote rows: ${selectedQuotePlan.enriched}`)
+          console.log(`Final lesson quote rows: ${selectedQuotePlan.rows.length}`)
+        }
         console.log('Payload writes were made.')
       } else {
         console.log(`Would upload new media records: ${artworkSummary.mediaRecordsPlanned}`)
@@ -662,6 +860,11 @@ async function main() {
         console.log(
           `Would set final lesson artwork rows to: ${artworkSummary.finalArtworkRowCount}`,
         )
+        if (selectedQuotePlan) {
+          console.log(`Would add selected quote rows: ${selectedQuotePlan.added}`)
+          console.log(`Would enrich matching quote rows: ${selectedQuotePlan.enriched}`)
+          console.log(`Would set final lesson quote rows to: ${selectedQuotePlan.rows.length}`)
+        }
         console.log('No Payload writes were made.')
       }
     } else {

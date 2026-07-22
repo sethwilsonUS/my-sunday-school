@@ -44,6 +44,16 @@ const addParagraphClass = (paragraph: string, className: string) =>
 const addSuperscriptClass = (superscript: string) =>
   superscript.replace(/^<sup\b[^>]*>/i, (tag) => addClassToTag(tag, 'scripture-verse-number'))
 
+const styleNumericSuperscripts = (content: string) =>
+  content.replace(/<sup\b[^>]*>\s*\d{1,3}\s*<\/sup>/gi, addSuperscriptClass)
+
+const promoteLegacyVerseNumbers = (content: string) =>
+  content.replace(
+    /(^|\u00a0|&nbsp;)\s*(\d{1,3})\s*(?=\u00a0|&nbsp;)/gi,
+    (_match, separator: string, verseNumber: string) =>
+      `${separator ? ' ' : ''}<sup class="scripture-verse-number">${verseNumber}</sup>`,
+  )
+
 const promotePsalmSuperscription = (html: string) =>
   html.replace(/^<p>([^<]+)<\/p>/, (paragraph, text: string) => {
     const trimmedText = text.trim()
@@ -69,13 +79,14 @@ const styleScriptureLines = (html: string) =>
   html.replace(
     /<p\b(?![^>]*\bscripture-superscription\b)[^>]*>(.*?)<\/p>/gis,
     (paragraph, content: string) => {
-      const leadingSuperscript = content.match(
+      const styledNumbers = styleNumericSuperscripts(promoteLegacyVerseNumbers(content))
+      const leadingSuperscript = styledNumbers.match(
         /^(\s*)(<sup\b[^>]*>\s*(\d{1,3})\s*<\/sup>)(\s*)/i,
       )
 
       if (leadingSuperscript) {
         const styledSuperscript = addSuperscriptClass(leadingSuperscript[2])
-        const styledContent = content.replace(
+        const styledContent = styledNumbers.replace(
           leadingSuperscript[0],
           `${leadingSuperscript[1]}${styledSuperscript} `,
         )
@@ -86,7 +97,9 @@ const styleScriptureLines = (html: string) =>
         )
       }
 
-      const leadingNumber = content.match(/^(\s*)(\d{1,3})(?:[\s.)]+|(?=[A-Z"']))(.*)$/s)
+      const leadingNumber = styledNumbers.match(
+        /^(\s*)(\d{1,3})(?:[\s.)]+|(?=[A-Z"']))(.*)$/s,
+      )
 
       if (leadingNumber) {
         const verseNumber = `<sup class="scripture-verse-number">${leadingNumber[2]}</sup>`
@@ -98,7 +111,14 @@ const styleScriptureLines = (html: string) =>
         )
       }
 
-      return addParagraphClass(paragraph, 'scripture-line')
+      if (styledNumbers.includes('scripture-verse-number')) {
+        return addParagraphClass(
+          paragraph.replace(content, styledNumbers),
+          'scripture-verse-start',
+        )
+      }
+
+      return addParagraphClass(paragraph.replace(content, styledNumbers), 'scripture-line')
     },
   )
 
@@ -120,9 +140,11 @@ export const richTextToHTML = (value: unknown): string | null => {
     disableTextAlign: true,
   }).trim()
   const cleanedHTML = html
-    .replaceAll('\u00a0', ' ')
     .replace(/<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>/gi, '')
     .trim()
+  const styledHTML = styleScriptureLines(promotePsalmSuperscription(cleanedHTML))
+    .replaceAll('\u00a0', ' ')
+    .replace(/&nbsp;/gi, ' ')
 
-  return styleScriptureLines(promotePsalmSuperscription(cleanedHTML)) || null
+  return styledHTML || null
 }
